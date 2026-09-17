@@ -5,6 +5,30 @@ import path from 'node:path';
 import os from 'node:os';
 import { runCategoryCli } from '../../src/cli/category.mjs';
 
+test('category CLI rejects output paths that would replace the source catalog, request or a previous workbook', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'category-output-protection-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await fs.mkdir(path.join(root, 'templates'));
+  const templatePath = path.join(root, 'templates/prom-reference.xlsx');
+  const previousPath = path.join(root, 'previous.xlsx');
+  const requestPath = path.join(root, 'request.json');
+  const resultPath = path.join(root, 'result.json');
+  await fs.writeFile(templatePath, 'source catalog bytes');
+  await fs.writeFile(previousPath, 'previous completed batch bytes');
+  for (const outputPath of [templatePath, previousPath, requestPath]) {
+    await fs.writeFile(requestPath, JSON.stringify({ categoryUrl: 'https://ug-opt.in.ua/ua/g123-test', export: { outputPath } }));
+    const before = await Promise.all([templatePath, previousPath, requestPath].map((file) => fs.readFile(file)));
+    let bootstrapped = false;
+    await assert.rejects(() => runCategoryCli(['--request', requestPath, '--result', resultPath], {
+      root,
+      bootstrap: async () => { bootstrapped = true; throw new Error('Bootstrap must not start'); },
+    }), /Workbook output must/);
+    assert.equal(bootstrapped, false);
+    const after = await Promise.all([templatePath, previousPath, requestPath].map((file) => fs.readFile(file)));
+    assert.deepEqual(after, before);
+  }
+});
+
 test('category CLI bootstraps the real template and persists an honest waiting result', async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'category-cli-'));
   t.after(() => fs.rm(root, { recursive: true, force: true }));

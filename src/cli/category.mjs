@@ -43,6 +43,15 @@ export async function runCategoryCli(argv, { runner = runCategoryProduction, boo
   request.export = { ...request.export, inputPath: templatePath,
     outputPath: request.export?.outputPath ?? resultPath.replace(/\.json$/iu, '') + '.xlsx' };
   if ([templatePath, path.resolve(root, request.export?.outputPath ?? 'outputs/category.xlsx')].includes(resultPath)) throw new Error('Result JSON must not overwrite a workbook');
+  const workbookPath = path.resolve(root, request.export.outputPath);
+  // Bootstrap switches exporter input to a runtime copy. Protect the original
+  // catalog here too, and never replace a previous batch or the request itself.
+  if ([templatePath, requestPath].includes(workbookPath)) throw new Error('Workbook output must not overwrite the source catalog or request');
+  const existingOutput = await fs.lstat(workbookPath).catch((error) => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (existingOutput) throw new Error('Workbook output must use a new path; an existing file or link cannot be replaced');
   const runtime = path.join(root, 'runtime');
   await fs.mkdir(runtime, { recursive: true });
   const lockPath = path.join(runtime, 'category-run.lock');

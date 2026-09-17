@@ -96,9 +96,12 @@ missing provider callbacks in Node are not a request for a paid API. The CLI
 itself cannot call a ChatGPT session's image tool and cannot bypass account limits.
 See CODEX_CATEGORY_EXECUTION.md for the concrete operator loop.
 
-The category runner exports only when every eligible new product is
-READY_FOR_EXPORT, there are no operator tasks, no invalid candidates and all
-media are published. Manual-review/failed products block the final workbook;
+The category runner exports only when every selected product is READY_FOR_EXPORT,
+there are no operator tasks or missing selected identities, and all media are
+published. Without targetCount, the selection covers the full new-product delta
+and invalid candidates also block export. With targetCount, invalid candidates
+outside the selection do not block the batch; a shortage permits only a partial
+workbook as described below. Manual-review/failed selected products block export;
 `completion` identifies blocked and registry-skipped products. Existing Prom
 products remain excluded from this new-product route. An empty new-product delta
 never produces an empty final workbook.
@@ -122,3 +125,5 @@ The CLI defaults export input to config/category-workflow.json catalogPath,
 remembers successfully bootstrapped explicit inputs and derives an XLSX output
 beside the result JSON. A different targetCount needs a new batch/result path.
 Existing registry reservations survive later batches within the same project.
+The CLI rejects workbook output that targets the original catalog, request or
+any existing file/link before bootstrap. Each new batch needs a new XLSX path.
