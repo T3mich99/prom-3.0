@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "exceljs": "4.4.0"
+  },
+  "name": "product-automation",
+  "private": true,
+  "scripts": {
+    "production": "node src/cli/production.mjs",
+    "scheduler": "node src/cli/scheduler.mjs",
+    "status": "node src/cli/status.mjs",
+    "resume": "node src/cli/resume.mjs",
+    "category": "node src/cli/category.mjs",
+    "test": "node tests/quality-gate.mjs node-tests",
+    "category:photos": "node src/cli/category-photo-import.mjs",
+    "category:media": "node src/cli/category-media-import.mjs"
+  }
+}

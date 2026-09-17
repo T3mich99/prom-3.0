@@ -1,0 +1,11 @@
+{
+  "folderId": "fixture-target-folder",
+  "productKey": "1001",
+  "assets": {
+    "01_main": { "id": "fixture-main", "width": 1280, "height": 1280, "mime": "image/png", "provenance": "generated", "isCurrent": true },
+    "02_benefits": { "id": "fixture-benefits", "width": 1280, "height": 1280, "mime": "image/png", "provenance": "generated", "isCurrent": true },
+    "03_features": { "id": "fixture-features", "width": 1280, "height": 1280, "mime": "image/png", "provenance": "generated", "isCurrent": true },
+    "04_use": { "id": "fixture-use", "width": 1280, "height": 1280, "mime": "image/png", "provenance": "generated", "isCurrent": true },
+    "05_details": { "id": "fixture-details", "width": 1280, "height": 1280, "mime": "image/png", "provenance": "generated", "isCurrent": true }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "sources": [
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35078\\raw-01.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35078\\raw-02.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35078\\raw-03.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35078\\raw-04.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35078\\raw-05.png"
+  ],
+  "main_title": "СКЛАДНИЙ ФЕН\nДЛЯ ПОЇЗДОК",
+  "main_subtitle": "Фен для волосся",
+  "benefits": [
+    "Складна ручка",
+    "Функція іонізації",
+    "Потужність 2000 Вт",
+    "Холодний обдув"
+  ],
+  "features": [
+    ["Потужність", "2000 Вт"],
+    ["Живлення", "Мережа 220 В"],
+    ["Кількість швидкостей", "3"],
+    ["Холодний обдув", "Так"],
+    ["Захист від перегріву", "Так"]
+  ],
+  "use_title": "ЗРУЧНА УКЛАДКА\nВ ДОРОЗІ",
+  "use_subtitle": "Компактний формат для волосся"
+}

@@ -1,0 +1,26 @@
+{
+  "sources": [
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35082\\raw-01.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35082\\raw-02.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35082\\raw-03.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35082\\raw-04.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35082\\raw-05.png"
+  ],
+  "main_title": "ФЕН-ЩІТКА\n3 НАСАДКИ",
+  "main_subtitle": "Іонізація для укладання",
+  "benefits": [
+    "3 насадки",
+    "Функція іонізації",
+    "Потужність 1000 Вт",
+    "3 швидкості"
+  ],
+  "features": [
+    ["Потужність", "1000 Вт"],
+    ["Кількість насадок", "3"],
+    ["Температурні режими", "2"],
+    ["Кількість швидкостей", "3"],
+    ["Живлення", "Мережа 220 В"]
+  ],
+  "use_title": "УКЛАДКА\nВДОМА",
+  "use_subtitle": "Фен-щітка для волосся"
+}

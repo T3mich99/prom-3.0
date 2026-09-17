@@ -1,0 +1,19 @@
+{
+  "sources": [
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw-v4\\35503\\raw-01.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw-v4\\35503\\raw-02.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw-v4\\35503\\raw-03.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw-v4\\35503\\raw-04.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw-v4\\35503\\raw-05.png"
+  ],
+  "blocks": [
+    {"title": "ФЕН\nДЛЯ ВОЛОССЯ", "subtitle": "Сушіння та укладання", "layout": "left-top", "size": 50},
+    {"title": "ШВИДКЕ\nСУШІННЯ", "subtitle": "2200 Вт", "layout": "left-top", "size": 49},
+    {"title": "3 ШВИДКОСТІ", "subtitle": "Обирай потрібний режим", "layout": "left-top", "size": 45, "color": [255, 255, 255], "muted": [245, 245, 245]},
+    {"title": "УКЛАДАННЯ\nВДОМА", "subtitle": "Швидко та зручно", "layout": "left-bottom", "size": 48},
+    {"title": "НАСАДКА-\nКОНЦЕНТРАТОР", "subtitle": "Точний напрямок повітря", "layout": "right-bottom", "size": 43, "color": [255, 255, 255], "muted": [245, 245, 245]}
+  ],
+  "ink": [20, 20, 20],
+  "muted": [52, 52, 52],
+  "accent": [164, 79, 79]
+}

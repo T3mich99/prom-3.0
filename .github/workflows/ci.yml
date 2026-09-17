@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - development
+      - 'development/**'
+      - refactor
+      - 'refactor/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Portable quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+
+      - name: Install locked Node dependencies
+        run: npm ci
+
+      - name: Run Node characterization, golden regression, and integration tests
+        run: node tests/quality-gate.mjs node-tests
+
+      - name: Validate JavaScript module syntax
+        run: node tests/quality-gate.mjs mjs-syntax
+
+      - name: Validate Python syntax
+        run: node tests/quality-gate.mjs python-syntax
+
+      - name: Validate PowerShell parsing
+        run: node tests/quality-gate.mjs powershell-syntax
+
+      - name: Check tracked-file whitespace
+        run: git diff --check HEAD^ HEAD

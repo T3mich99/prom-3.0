@@ -1,0 +1,9 @@
+{
+  "categoryUrl": "https://ug-opt.in.ua/ua/REPLACE_WITH_EXACT_CATEGORY_PATH",
+  "categoryName": "Замінити на задану користувачем категорію",
+  "productInputs": {},
+  "export": {
+    "inputPath": "templates/prom-reference.xlsx",
+    "outputPath": "outputs/category-products.xlsx"
+  }
+}

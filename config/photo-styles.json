@@ -1,0 +1,50 @@
+{
+  "version": 3,
+  "global": {
+    "instructions": [
+      "Use the approved premium marketplace infographic style: large exact product, bold legible Ukrainian headings, useful verified benefits, restrained thin-line pictograms and clean editorial spacing. Use category-appropriate light neutral or subtle colored settings; beige is not mandatory.",
+      "No black clouds, dark halos, smoky surrounds, heavy vignettes, dirty cutout edges or large opaque dark panels behind the product. A black product must retain its real black color.",
+      "Use only a subtle localized contact shadow; never surround the full product silhouette with a blurred black mask.",
+      "Keep the genuine product brand. Do not show model names or model numbers anywhere in the image, including printed product markings and overlays. Remove SKU/article overlays, supplier labels and service text without changing the real product geometry.",
+      "Identity outranks angle variety: use another supplied view, safe crop or layout if an unseen angle would require inventing geometry.",
+      "Every SKU requires its own five-scene creative brief based on verified facts and source photos. Do not select a fixed generic background or the same five layouts for all products.",
+      "Within each gallery, every image must differ in buyer message, scene, composition, crop or source-supported viewpoint, text placement and infographic layout. Replacing only words, background color or props is not sufficient.",
+      "Across products, develop different individual concepts and compare with prior galleries. Preserve a consistent premium quality level without copying another product's composition, background and copy.",
+      "Roles 1-4 are commercial infographic photographs; role 5 is a clean object-only photograph with no text, icons or panels and a composition different from the hero.",
+      "An approved style reference is not evidence of product identity, accessories, wattage, temperature modes, percentages, medical claims or included components. Those must come from the exact supplier SKU.",
+      "Inspect all five actual outputs together and compare against prior product galleries before accepting sceneDistinct, layoutDistinct, productSpecificDesign or slotDistinct. Metadata diversity alone cannot prove visual uniqueness."
+    ],
+    "references": [
+      {
+        "path": "references/photos/global/commercial-infographic-approved-2026-09-17.png",
+        "reason": "User-provided visual style reference approved 2026-09-17; premium commercial Ukrainian infographic treatment only. User explicitly requires unique concepts across products AND within every five-image gallery. Do not copy brands, facts or layouts verbatim."
+      }
+    ]
+  },
+  "families": {},
+  "categories": {},
+  "products": {},
+  "changes": [
+    {
+      "version": 1,
+      "scope": "global",
+      "reason": "User requested consistent commercial photos without black clouds, preserving the genuine brand.",
+      "visualExamplesApproved": false
+    },
+    {
+      "version": 2,
+      "scope": "global",
+      "date": "2026-09-17",
+      "reason": "User: photos should look similar to supplied infographic sample; every product and every one of its five photos must be unique; approved and asked to persist in repository. Built-in Codex workflow for entire chosen category.",
+      "visualExamplesApproved": true,
+      "approvalScope": "Visual style and diversity requirements only; example product facts and generated identities are not supplier evidence."
+    },
+    {
+      "version": 3,
+      "scope": "global",
+      "date": "2026-09-17",
+      "reason": "User explicitly confirmed: no model in photographs, description or title. Genuine brand remains.",
+      "visualExamplesApproved": false
+    }
+  ]
+}

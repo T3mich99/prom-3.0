@@ -1,0 +1,26 @@
+{
+  "sources": [
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35365\\raw-01.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35365\\raw-02.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35365\\raw-03.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35365\\raw-04.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35365\\raw-05.png"
+  ],
+  "main_title": "ФЕН ДЛЯ ВОЛОССЯ\n900 ВТ",
+  "main_subtitle": "Іонізація та холодний обдув",
+  "benefits": [
+    "Функція іонізації",
+    "Холодний обдув",
+    "Потужність 900 Вт",
+    "3 швидкості"
+  ],
+  "features": [
+    ["Потужність", "900 Вт"],
+    ["Кількість швидкостей", "3"],
+    ["Холодний обдув", "Так"],
+    ["Живлення", "Мережа 220 В"],
+    ["Довжина шнура", "1.8 м"]
+  ],
+  "use_title": "ЗРУЧНЕ СУШІННЯ\nВДОМА",
+  "use_subtitle": "Фен для волосся"
+}

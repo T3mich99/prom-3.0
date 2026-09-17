@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "supplier": {
+    "name": "UG-OPT",
+    "baseUrl": "https://ug-opt.in.ua/ua/",
+    "scope": "USER_SELECTED_CATEGORY_ALL_PAGES"
+  },
+  "drive": {
+    "rootFolderId": "1hFy2nf7m-JzM31ugaUoHH37bv0z_e_Yv",
+    "productImagesFolderId": "1quplTV97b3geOQu5dn_AJXFLYbEmcNpN",
+    "finalExcelFolderId": "1brMmRMwtUeYhLsDB4NUlC-nRZ_aexsVj",
+    "rootFolderUrl": "https://drive.google.com/drive/folders/1hFy2nf7m-JzM31ugaUoHH37bv0z_e_Yv",
+    "productImagesFolderUrl": "https://drive.google.com/drive/folders/1quplTV97b3geOQu5dn_AJXFLYbEmcNpN",
+    "finalExcelFolderUrl": "https://drive.google.com/drive/folders/1brMmRMwtUeYhLsDB4NUlC-nRZ_aexsVj"
+  },
+  "approvedStyleReference": {
+    "folderId": "150KLm2WvJhauPANwmgIu4xOMi8ROHprM",
+    "fileId": "1PyZygHVqrAC6aIyYrYiFHZkAEaXT0M72",
+    "url": "https://drive.google.com/file/d/1PyZygHVqrAC6aIyYrYiFHZkAEaXT0M72/view?usp=drivesdk",
+    "repositoryPath": "references/photos/global/commercial-infographic-approved-2026-09-17.png"
+  },
+  "verifiedOn": "2026-09-17",
+  "verification": {
+    "rootFolderRead": true,
+    "productImagesFolderRead": true,
+    "styleReferenceUploadAndReadback": true,
+    "productionPublicImageProbe": false,
+    "styleReferencePublicImageProbe": true,
+    "styleReferencePublicImageExactBytes": true
+  },
+  "instructions": [
+    "Upload generated product images into the existing PRODUCT IMAGES folder. Preserve existing files and do not overwrite matching names without comparing product identity and bytes.",
+    "Existing folder permissions were observed but not changed. Do not broaden access or change parent-folder sharing.",
+    "FINAL EXCEL is the existing destination if the user requests a Drive copy; the mandatory deliverable remains the original-format XLSX.",
+    "Verify unauthenticated direct image URLs, image MIME type and bytes before export; a successful authenticated upload is not a public-image verification."
+  ]
+}

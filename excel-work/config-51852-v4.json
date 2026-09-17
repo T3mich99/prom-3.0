@@ -1,0 +1,19 @@
+{
+  "sources": [
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw-v4\\51852\\raw-01.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw-v4\\51852\\raw-02.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw-v4\\51852\\raw-03.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw-v4\\51852\\raw-04.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw-v4\\51852\\raw-05.png"
+  ],
+  "blocks": [
+    {"title": "ПЛОЙКА\nДЛЯ ВОЛОССЯ", "subtitle": "Локони та укладання", "layout": "left-top", "size": 50},
+    {"title": "ГАРНІ\nЛОКОНИ", "subtitle": "Для домашнього укладання", "layout": "left-top", "size": 49},
+    {"title": "ТЕРМОРЕГУЛЯТОР", "subtitle": "Контроль нагрівання", "layout": "right-top", "size": 43},
+    {"title": "УКЛАДАННЯ\nВДОМА", "subtitle": "Зручне створення локонів", "layout": "left-bottom", "size": 46},
+    {"title": "ФОРМА\nБАРАБАНА", "subtitle": "Для створення локонів", "layout": "right-bottom", "size": 44}
+  ],
+  "ink": [20, 20, 20],
+  "muted": [52, 52, 52],
+  "accent": [164, 79, 79]
+}

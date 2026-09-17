@@ -1,0 +1,30 @@
+{
+  "sources": [
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35503\\raw-01.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35503\\raw-02.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35503\\raw-03.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35503\\raw-04.png",
+    "C:\\Users\\Dell\\Documents\\ChatGPT\\пром\\outputs\\hair-styling-master-prompt-2026-09-07\\raw\\35503\\raw-05.png"
+  ],
+  "main_title": "ФЕН\nДЛЯ ВОЛОССЯ",
+  "main_subtitle": "Іонізація та холодний обдув",
+  "main_benefits": [
+    "Потужність 2200 Вт",
+    "Насадки для укладання"
+  ],
+  "benefits": [
+    "Функція іонізації",
+    "Холодний обдув",
+    "Потужність 2200 Вт",
+    "3 швидкості"
+  ],
+  "features": [
+    ["Потужність", "2200 Вт"],
+    ["Кількість швидкостей", "3"],
+    ["Температурні режими", "2"],
+    ["Холодний обдув", "Так"],
+    ["Живлення", "Мережа 220 В"]
+  ],
+  "use_title": "ЗРУЧНЕ СУШІННЯ",
+  "use_subtitle": "Насадки для укладання волосся"
+}

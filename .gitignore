@@ -1,0 +1,74 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+*.pem
+*.key
+*.p12
+*.pfx
+
+credentials/
+secrets/
+
+**/service-account*.json
+**/*credentials*.json
+**/commission-A4-J4296.json
+
+# Generated outputs
+runtime/
+outputs/
+output/
+generated/
+exports/
+export/
+temp/
+tmp/
+cache/
+.cache/
+
+# Product/image generation
+product-photos/
+generated-images/
+generated-photos/
+renders/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Logs
+logs/
+*.log
+
+# Builds
+dist/
+build/
+
+# IDE / OS
+.idea/
+.vscode/
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Temporary Office files
+~$*.xlsx
+~$*.xls
+~$*.docx
+GitHub/
+
+# Category request artifacts (keep locally for resume)
+requests/
