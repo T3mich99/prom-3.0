@@ -44,6 +44,7 @@ export const PRODUCTION_MODES = Object.freeze({
 
 export const PRODUCTION_STATUSES = Object.freeze({
   SELECTED: 'SELECTED',
+  SOURCE_REVIEW: 'SOURCE_REVIEW',
   BLOCKED_SUPPLIER: 'BLOCKED_SUPPLIER',
   SUPPLIER_REVIEW: 'SUPPLIER_REVIEW',
   WAITING_FOR_MARKET_RESEARCH: 'WAITING_FOR_MARKET_RESEARCH',
@@ -64,6 +65,7 @@ export const PRODUCTION_STATUSES = Object.freeze({
 
 const JOB_KEYS = new Set([
   'selectedProduct',
+  'sourceEvidence',
   'supplierState',
   'pricingProduct',
   'sourceFacts',
@@ -86,6 +88,7 @@ const CONTENT_OPTION_KEYS = new Set(['generator', 'policy', 'commercialPolicy'])
 const PHOTO_OPTION_KEYS = new Set(['provider', 'outputRoot', 'policy', 'usedCreativeBriefs']);
 const CHARACTERISTIC_OPTION_KEYS = new Set(['mapping', 'policy']);
 const OPERATOR_ARTIFACT_KEYS = new Set(['marketEvidence', 'pricingDecision', 'contentArtifact', 'photoArtifact', 'approvedMedia']);
+const SOURCE_REVIEW_TASK_VERSION = 'source-review-v1';
 const MARKET_TASK_VERSION = 'market-research-v1';
 const CONTENT_TASK_VERSION = 'content-generation-v1';
 const CONTENT_REWORK_TASK_VERSION = 'content-rework-v1';
@@ -241,6 +244,7 @@ function validateJob(job) {
   productKeyOf(job.selectedProduct);
   if (job.supplierState !== undefined) assertRecord(job.supplierState, 'job.supplierState');
   if (job.pricingProduct !== undefined) assertRecord(job.pricingProduct, 'job.pricingProduct');
+  if (job.sourceEvidence !== undefined) assertRecord(job.sourceEvidence, 'job.sourceEvidence');
   if (job.sourceFacts !== undefined) assertRecord(job.sourceFacts, 'job.sourceFacts');
   if (job.sourceText !== undefined) assertRecord(job.sourceText, 'job.sourceText');
   if (job.categoryContext !== undefined) assertRecord(job.categoryContext, 'job.categoryContext');
@@ -254,6 +258,57 @@ function validateJob(job) {
     assertKnownKeys(job.operatorArtifacts, OPERATOR_ARTIFACT_KEYS, 'job.operatorArtifacts');
   }
   return true;
+}
+
+function sourceReviewTask(ctx, job) {
+  return {
+    ...taskBase('SOURCE_REVIEW', ctx.productKey, SOURCE_REVIEW_TASK_VERSION),
+    input: {
+      productKey: ctx.productKey,
+      sourceUrl: job.sourceEvidence.sourceUrl,
+      evidence: clone(job.sourceEvidence),
+    },
+    instructions: {
+      inspectOfficialProductPageAndImages: true,
+      resolveEveryDiagnostic: true,
+      selectOneExactVariant: true,
+      returnOnlyVerifiedFacts: true,
+      returnStatusReadyOnlyWhenUnambiguous: true,
+    },
+    expectedResultSchema: {
+      type: 'source-evidence-v1',
+      required: ['productKey', 'version', 'status', 'sourceUrl', 'sourceFacts', 'sourceText', 'sourceImages', 'diagnostics', 'provenance'],
+      status: 'READY',
+    },
+    validationAuthority: 'ugopt-product-detail-v1',
+  };
+}
+
+function sourceGate(ctx, job) {
+  if (job.sourceEvidence === undefined) return null;
+  const evidence = job.sourceEvidence;
+  if (evidence.productKey !== ctx.productKey) {
+    throw new ProductionOrchestrationError('Source evidence productKey does not match selected product', 'SOURCE_EVIDENCE_PRODUCT_MISMATCH', { productKey: ctx.productKey, stage: 'source' });
+  }
+  if (!['READY', 'REVIEW'].includes(evidence.status)) {
+    throw new ProductionOrchestrationError('Source evidence status must be READY or REVIEW', 'SOURCE_EVIDENCE_STATUS_INVALID', { productKey: ctx.productKey, stage: 'source' });
+  }
+  if (!isRecord(evidence.sourceFacts) || !isRecord(evidence.sourceText) || !Array.isArray(evidence.sourceImages)) {
+    throw new ProductionOrchestrationError('Source evidence is incomplete', 'SOURCE_EVIDENCE_INVALID', { productKey: ctx.productKey, stage: 'source' });
+  }
+  if (evidence.status === 'REVIEW' || evidence.sourceImages.length === 0) {
+    const task = sourceReviewTask(ctx, job);
+    return baseResult(ctx, PRODUCTION_STATUSES.SOURCE_REVIEW, {
+      sourceEvidence: clone(evidence),
+      nextAction: operatorAction(task),
+      diagnostics: (Array.isArray(evidence.diagnostics) ? evidence.diagnostics : []).map((item) => ({
+        code: typeof item?.code === 'string' ? item.code : 'SOURCE_REVIEW_REQUIRED',
+        stage: 'source',
+        message: typeof item?.message === 'string' ? item.message : 'Official source evidence requires review.',
+      })),
+    });
+  }
+  return null;
 }
 
 function artifactFromJob(job, field) {
@@ -977,6 +1032,8 @@ function finishReady(ctx, job, options, pricingDecision, contentArtifact, photoA
 async function advanceValidatedJob(job, options) {
   const productKey = productKeyOf(job.selectedProduct);
   const ctx = { productKey, selectedProduct: clone(job.selectedProduct), mode: options.mode };
+  const sourceReview = sourceGate(ctx, job);
+  if (sourceReview !== null) return sourceReview;
   const supplierState = supplierStateFor(job, productKey);
   if (supplierState?.availabilityStatus === UGOPT_AVAILABILITY_STATES.UNAVAILABLE
     || supplierState?.availabilityStatus === UGOPT_AVAILABILITY_STATES.REMOVED) {
@@ -1023,13 +1080,14 @@ function failedBatchResult(job, options, error) {
 
 function batchSummary(results) {
   const keys = [
-    'readyForExport', 'waitingMarketResearch', 'pricingReview', 'waitingContent', 'contentReview', 'contentRework',
+    'readyForExport', 'sourceReview', 'waitingMarketResearch', 'pricingReview', 'waitingContent', 'contentReview', 'contentRework',
     'waitingPhotos', 'photoReview', 'photoRework', 'blockedSupplier', 'supplierReview', 'skipped', 'failed', 'priced',
   ];
   const summary = Object.fromEntries(keys.map((key) => [key, 0]));
   for (const result of results) {
     const key = {
       [PRODUCTION_STATUSES.READY_FOR_EXPORT]: 'readyForExport',
+      [PRODUCTION_STATUSES.SOURCE_REVIEW]: 'sourceReview',
       [PRODUCTION_STATUSES.WAITING_FOR_MARKET_RESEARCH]: 'waitingMarketResearch',
       [PRODUCTION_STATUSES.PRICING_REVIEW]: 'pricingReview',
       [PRODUCTION_STATUSES.PRICED]: 'priced',

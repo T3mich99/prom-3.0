@@ -131,9 +131,15 @@ function expectedItems(sourceCode) {
 export async function validateDriveMediaPublicationArtifact(artifact, options = {}) {
   if (!isRecord(artifact)) throw new TypeError('publication artifact must be an object');
   for (const key of Object.keys(artifact)) {
-    if (!['productKey', 'sourceCode', 'folderId', 'items'].includes(key)) throw new TypeError(`Unsupported publication artifact field: ${key}`);
+    if (!['productKey', 'sourceCode', 'folderId', 'access', 'items'].includes(key)) throw new TypeError(`Unsupported publication artifact field: ${key}`);
   }
   if (!nonEmpty(artifact.productKey) || !nonEmpty(artifact.sourceCode) || !nonEmpty(artifact.folderId)) throw new TypeError('publication artifact identity is incomplete');
+  if (!isRecord(artifact.access)
+    || artifact.access.permissionType !== 'anyone'
+    || artifact.access.role !== 'reader'
+    || artifact.access.allowFileDiscovery !== false) {
+    throw new TypeError('publication access must attest anyone/reader with file discovery disabled; public writer access is forbidden');
+  }
   if (!Array.isArray(artifact.items) || artifact.items.length !== PHOTO_ROLE_ORDER.length) throw new TypeError('publication artifact must contain exactly five items');
   const expected = expectedItems(artifact.sourceCode);
   const seenIds = new Set();
@@ -155,7 +161,7 @@ export async function validateDriveMediaPublicationArtifact(artifact, options = 
     seenUrls.add(item.publicUrl);
     items.push({ index: item.index, role: item.role, filename: item.filename, fileId: item.fileId, sha256: item.sha256, publicUrl: item.publicUrl });
   }
-  return { status: DRIVE_MEDIA_PUBLICATION_STATUSES.READY, productKey: artifact.productKey, sourceCode: artifact.sourceCode, folderId: artifact.folderId, items };
+  return { status: DRIVE_MEDIA_PUBLICATION_STATUSES.READY, productKey: artifact.productKey, sourceCode: artifact.sourceCode, folderId: artifact.folderId, access: clone(artifact.access), items };
 }
 
 export async function toPublishableMediaArtifact(artifact, options = {}) {

@@ -773,6 +773,7 @@ test('batch summary exposes deterministic workflow counters', async () => {
   assert.deepEqual(result.summary, {
     total: 3,
     readyForExport: 0,
+    sourceReview: 0,
     waitingMarketResearch: 1,
     pricingReview: 0,
     waitingContent: 1,

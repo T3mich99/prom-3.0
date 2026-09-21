@@ -20,8 +20,12 @@ function config() {
 }
 
 test('next daily local schedule uses exact local time and rolls to tomorrow after it passes', () => {
-  assert.equal(nextDailyLocalRun('2026-09-13T09:00:00.000Z', '10:30').getHours(), 10);
-  assert.equal(nextDailyLocalRun('2026-09-13T11:00:00.000Z', '10:30').getDate(), new Date('2026-09-14T11:00:00.000Z').getDate());
+  const before = new Date(2026, 8, 13, 9, 0, 0, 0);
+  const after = new Date(2026, 8, 13, 11, 0, 0, 0);
+  const sameDay = nextDailyLocalRun(before, '10:30');
+  const nextDay = nextDailyLocalRun(after, '10:30');
+  assert.deepEqual([sameDay.getFullYear(), sameDay.getMonth(), sameDay.getDate(), sameDay.getHours(), sameDay.getMinutes()], [2026, 8, 13, 10, 30]);
+  assert.deepEqual([nextDay.getFullYear(), nextDay.getMonth(), nextDay.getDate(), nextDay.getHours(), nextDay.getMinutes()], [2026, 8, 14, 10, 30]);
   assert.throws(() => normalizeSchedulerConfig({ ...config(), dailyLocalTime: undefined }), /exactly one/u);
 });
 
