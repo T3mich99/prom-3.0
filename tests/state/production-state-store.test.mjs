@@ -45,6 +45,20 @@ test('state store creates schema v1, persists a run, and keeps durable task stat
   store.close();
 });
 
+test('identical operator tasks are isolated by run instead of colliding globally', () => {
+  const { clock, idGenerator } = harness();
+  const store = openProductionStateStore({ databasePath: ':memory:', clock, idGenerator });
+  store.createRun({ runId: 'run-a', request: request() });
+  store.createRun({ runId: 'run-b', request: request() });
+  store.persistRunResult('run-a', waitingResult());
+  store.persistRunResult('run-b', waitingResult());
+  const first = store.listOperatorTasks('run-a')[0];
+  const second = store.listOperatorTasks('run-b')[0];
+  assert.notEqual(first.identityKey, second.identityKey);
+  assert.notEqual(first.taskId, second.taskId);
+  store.close();
+});
+
 test('committed task state survives a database reopen and a failed transition rolls back', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'production-state-'));
   const databasePath = path.join(root, 'state.sqlite');

@@ -213,8 +213,12 @@ function createSchema(db) {
   }
 }
 
-function taskIdentity(task) {
+function legacyTaskIdentity(task) {
   return hash({ taskType: task.taskType, productKey: task.productKey, taskVersion: task.taskVersion, input: task.input });
+}
+
+function scopedTaskIdentity(runId, task) {
+  return hash({ runId, taskType: task.taskType, productKey: task.productKey, taskVersion: task.taskVersion, input: task.input });
 }
 
 function taskFromRow(row) {
@@ -433,16 +437,20 @@ export function openProductionStateStore({ databasePath, clock = systemClock(), 
       requiredString(task.taskType, 'operator task.taskType');
       requiredString(task.productKey, 'operator task.productKey');
       requiredString(task.taskVersion, 'operator task.taskVersion');
-      const identityKey = taskIdentity(task);
+      // Reuse identities written by schema v1 before task scoping. If another
+      // run owns that legacy identity, derive a run-scoped key instead.
+      let identityKey = legacyTaskIdentity(task);
       let existing = db.prepare('SELECT * FROM operator_tasks WHERE identity_key = ?').get(identityKey);
+      if (existing && existing.run_id !== runId) {
+        identityKey = scopedTaskIdentity(runId, task);
+        existing = db.prepare('SELECT * FROM operator_tasks WHERE identity_key = ?').get(identityKey);
+      }
       if (!existing) {
         const taskId = makeId('task', timestamp);
         db.prepare(`INSERT INTO operator_tasks (task_id, run_id, product_key, task_type, task_version, identity_key, payload_json, state, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
           .run(taskId, runId, task.productKey, task.taskType, task.taskVersion, identityKey, stableJson(task), DURABLE_TASK_STATES.WAITING, timestamp);
         existing = db.prepare('SELECT * FROM operator_tasks WHERE task_id = ?').get(taskId);
-      } else if (existing.run_id !== runId) {
-        throw new ProductionStateStoreError('Operator task identity collides across runs', 'TASK_IDENTITY_CONFLICT');
       }
       taskRows.push(taskFromRow(existing));
     }

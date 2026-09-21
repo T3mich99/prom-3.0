@@ -649,11 +649,18 @@ test('built-in photo importer checks reviewed bytes, requires visual QA, and mak
   assert.equal(unreviewed.quality.approvedMediaArtifact, undefined);
   // Simulated checklist for fixture bytes, never a production visual approval.
   const visualQa = { productKey: plan.productKey, version: plan.version, verification: 'OPERATOR_CHECKLIST', status: 'READY',
-    photos: unreviewed.quality.visualQa.photos.map((p) => ({ ...p, checks: Object.fromEntries(Object.keys(p.checks).map((key) => [key, true])) })),
+    photos: unreviewed.quality.visualQa.photos.map((p) => ({ ...p,
+      observedText: input.plan.photos.find((photo) => photo.index === p.photoIndex).text.map((item) => item.value),
+      checks: Object.fromEntries(Object.keys(p.checks).map((key) => [key, true])) })),
   };
   const reviewed = await importCodexPhotoFiles({ ...input, visualQa });
   assert.equal(reviewed.quality.status, 'READY');
   assert.equal(reviewed.quality.approvedMediaArtifact.photos.length, 5);
+  const wrongTextQa = structuredClone(visualQa);
+  wrongTextQa.photos[1].observedText = ['Вигаданий напис'];
+  const wrongText = await importCodexPhotoFiles({ ...input, visualQa: wrongTextQa });
+  assert.equal(wrongText.quality.status, 'REWORK');
+  assert.equal(wrongText.quality.approvedMediaArtifact, undefined);
   await fs.writeFile(files[0].path, png(1280, 1280, 99));
   await assert.rejects(() => importCodexPhotoFiles({ ...input, visualQa }), /changed after review/);
 });

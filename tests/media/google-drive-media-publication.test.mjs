@@ -71,7 +71,7 @@ test('accepts only a complete verified Drive publication artifact and preserves 
       publicUrl: `https://lh3.googleusercontent.com/d/drive-file-${index + 1}=w1280`,
     };
   });
-  const artifact = { productKey: 'ugopt:123', sourceCode: 'U123U', folderId: 'folder-1', items };
+  const artifact = { productKey: 'ugopt:123', sourceCode: 'U123U', folderId: 'folder-1', access: { permissionType: 'anyone', role: 'reader', allowFileDiscovery: false }, items };
   const probe = async (url, item) => ({ ok: true, contentType: 'image/png', sha256: item.sha256, url });
   const verified = await validateDriveMediaPublicationArtifact(artifact, {
     probe,
@@ -95,6 +95,7 @@ test('accepts only a complete verified Drive publication artifact and preserves 
   invalid.items[4].publicUrl = invalid.items[0].publicUrl;
   await assert.rejects(() => validateDriveMediaPublicationArtifact(invalid, { probe }), /unique/u);
   await assert.rejects(() => validateDriveMediaPublicationArtifact(artifact), /probe/u);
+  await assert.rejects(() => validateDriveMediaPublicationArtifact({ ...artifact, access: { permissionType: 'anyone', role: 'writer', allowFileDiscovery: false } }, { probe }), /writer access is forbidden/u);
 });
 
 test('publication task refuses files outside the injected output root', async (t) => {

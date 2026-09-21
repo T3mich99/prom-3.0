@@ -13,6 +13,7 @@ import { exportPromDeltaWorkbook } from '../excel/prom-delta-export.mjs';
 import { buildDriveMediaPublicationTask } from '../media/google-drive-media-publication.mjs';
 import { advanceProductionProduct, collectOperatorTasks, PRODUCTION_MODES, PRODUCTION_STATUSES } from './production-orchestrator.mjs';
 import { collectUgoptCategory } from '../suppliers/ugopt/category-adapter.mjs';
+import { collectUgoptProductDetail } from '../suppliers/ugopt/product-detail-adapter.mjs';
 
 export const CATEGORY_PRODUCTION_MODE = PRODUCTION_MODES.CATEGORY_PRODUCTION;
 
@@ -27,12 +28,14 @@ const OPTION_KEYS = new Set([
   'collector', 'collectorOptions', 'resolveCategoryIdentifier', 'registry', 'registryLoader',
   'pricing', 'production', 'content', 'photos', 'characteristics', 'categoryMetadata',
   'stateStore', 'runId', 'excelExporter', 'driveMedia',
+  'productDetailCollector', 'productDetailOptions',
 ]);
 const PRODUCT_INPUT_KEYS = new Set([
   'supplierState', 'pricingProduct', 'sourceFacts', 'sourceText', 'categoryContext', 'sourceImages',
   'marketEvidence', 'pricingDecision', 'contentArtifact', 'photoArtifact', 'approvedMedia',
   'resolvedMetadata', 'characteristicMapping', 'publishableMedia', 'promFields',
   'photoCreativeBrief',
+  'sourceEvidence',
 ]);
 
 function isRecord(value) {
@@ -96,10 +99,11 @@ export function normalizeCategoryProductionRequest(request) {
 function normalizeOptions(options) {
   if (!isRecord(options)) throw new TypeError('category production options must be an object');
   assertKnownKeys(options, OPTION_KEYS, 'category production options');
-  for (const key of ['collectorOptions', 'pricing', 'production', 'content', 'photos', 'characteristics']) {
+  for (const key of ['collectorOptions', 'productDetailOptions', 'pricing', 'production', 'content', 'photos', 'characteristics']) {
     if (options[key] !== undefined && !isRecord(options[key])) throw new TypeError(`options.${key} must be an object`);
   }
   if (options.collector !== undefined && typeof options.collector !== 'function') throw new TypeError('options.collector must be a function');
+  if (options.productDetailCollector !== undefined && typeof options.productDetailCollector !== 'function') throw new TypeError('options.productDetailCollector must be a function');
   if (options.resolveCategoryIdentifier !== undefined && typeof options.resolveCategoryIdentifier !== 'function') throw new TypeError('options.resolveCategoryIdentifier must be a function');
   if (options.registry !== undefined && !isRecord(options.registry)) throw new TypeError('options.registry must be an existing Prom registry object');
   if (options.registryLoader !== undefined && typeof options.registryLoader !== 'function') throw new TypeError('options.registryLoader must be a function');
@@ -231,8 +235,9 @@ function categoryPricingOptions(options) {
 }
 
 function jobFor(category, candidate, input, options) {
-  const sourceFacts = sourceFactsFor(candidate, input);
-  const sourceImages = candidateSourceImages(candidate, input);
+  const evidence = input.sourceEvidence;
+  const sourceFacts = evidence?.sourceFacts ?? sourceFactsFor(candidate, input);
+  const sourceImages = evidence?.sourceImages ?? candidateSourceImages(candidate, input);
   const categoryContext = input.categoryContext ?? {
     source: 'ug-opt',
     categoryName: category.sourceCategoryName ?? category.requestedName,
@@ -244,9 +249,11 @@ function jobFor(category, candidate, input, options) {
     sourceImages,
     categoryContext: clone(categoryContext),
   };
+  if (evidence !== undefined) job.sourceEvidence = clone(evidence);
   for (const key of ['supplierState', 'pricingProduct', 'sourceText', 'marketEvidence', 'pricingDecision', 'contentArtifact', 'photoArtifact', 'approvedMedia', 'characteristicMapping', 'photoCreativeBrief']) {
     if (input[key] !== undefined) job[key] = clone(input[key]);
   }
+  if (evidence?.sourceText !== undefined) job.sourceText = clone(evidence.sourceText);
   const metadata = input.resolvedMetadata ?? options.categoryMetadata?.[category.requestKey];
   if (metadata !== undefined) job.resolvedMetadata = clone(metadata);
   return job;
@@ -321,6 +328,42 @@ async function persistProduct(stateStore, runId, result) {
     operatorTasks: collectOperatorTasks({ results: [result] }),
     summary: { productKey: result.productKey, workflowStatus: result.workflowStatus },
   });
+}
+
+function failedSourceEvidence(candidate, error) {
+  return {
+    productKey: candidate.selectionKey,
+    version: 1,
+    status: 'REVIEW',
+    sourceUrl: candidate.product?.sourceUrl,
+    sourceFacts: sourceFactsFor(candidate, {}),
+    sourceText: { language: 'uk', title: text(candidate.product?.title), description: '', characteristics: [] },
+    sourceImages: candidateSourceImages(candidate, {}),
+    diagnostics: [{
+      code: typeof error?.code === 'string' ? error.code : 'SOURCE_DETAIL_COLLECTION_FAILED',
+      message: 'Official product detail could not be collected and must be reviewed before content generation.',
+    }],
+    provenance: { supplier: 'ug-opt', authority: 'category-listing-fallback', parser: 'ugopt-product-detail-v1' },
+  };
+}
+
+async function enrichSourceEvidence(item, collector, collectorOptions, stateStore, runId) {
+  if (item.input.sourceEvidence !== undefined || collector === null) return item;
+  let evidence;
+  try {
+    evidence = await collector(item.candidate, collectorOptions);
+  } catch (error) {
+    evidence = failedSourceEvidence(item.candidate, error);
+  }
+  if (!isRecord(evidence) || evidence.productKey !== item.candidate.selectionKey) {
+    throw new TypeError('productDetailCollector must return source evidence for the selected productKey');
+  }
+  item.input.sourceEvidence = clone(evidence);
+  if (typeof stateStore?.saveArtifact === 'function') stateStore.saveArtifact(runId, item.candidate.selectionKey, 'sourceEvidence', evidence, {
+    source: 'ugopt-product-detail-collector',
+    sourceUrl: evidence.sourceUrl,
+  });
+  return item;
 }
 
 async function resumeRequest(request, stateStore, runId) {
@@ -401,6 +444,11 @@ export async function runCategoryProduction(request, options = {}) {
   const selectedSet = new Set(selectedProductKeys);
   const deferredProductKeys = [...pool.keys()].filter((key) => !selectedSet.has(key));
   filtered.candidates = selectedProductKeys.filter((key) => pool.has(key)).map((key) => pool.get(key));
+  const detailCollector = normalizedOptions.productDetailCollector
+    ?? (collector === collectUgoptCategory ? collectUgoptProductDetail : null);
+  for (const item of filtered.candidates) {
+    await enrichSourceEvidence(item, detailCollector, normalizedOptions.productDetailOptions ?? {}, normalizedOptions.stateStore, normalizedOptions.runId);
+  }
   const selection = {
     scope: targetCount === null ? 'ALL_ELIGIBLE_NEW_PRODUCTS' : 'REQUESTED_NEW_PRODUCT_COUNT',
     targetCount, availableNewCount, selectedProductKeys, missingSelectedProductKeys,

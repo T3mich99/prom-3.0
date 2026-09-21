@@ -2,6 +2,7 @@ import { runEndToEndProduction } from '../orchestration/end-to-end-production-ru
 import { DURABLE_TASK_STATES, ProductionStateStoreError } from '../state/production-state-store.mjs';
 
 export const OPERATOR_ARTIFACT_TYPES = Object.freeze({
+  SOURCE_REVIEW: 'sourceEvidence',
   MARKET_RESEARCH: 'marketEvidence',
   CONTENT_GENERATION: 'contentArtifact',
   CONTENT_REWORK: 'contentArtifact',
