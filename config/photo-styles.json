@@ -1,10 +1,11 @@
 {
-  "version": 3,
+  "version": 4,
   "global": {
     "instructions": [
       "Use the approved premium marketplace infographic style: large exact product, bold legible Ukrainian headings, useful verified benefits, restrained thin-line pictograms and clean editorial spacing. Use category-appropriate light neutral or subtle colored settings; beige is not mandatory.",
       "No black clouds, dark halos, smoky surrounds, heavy vignettes, dirty cutout edges or large opaque dark panels behind the product. A black product must retain its real black color.",
       "Use only a subtle localized contact shadow; never surround the full product silhouette with a blurred black mask.",
+      "Every accepted image must be a fully opaque full-bleed square: the scene must reach all four edges and corners with no transparency, cutout border, checkerboard, black corner, black contour or dark vignette. Reject and regenerate any frame that fails this condition.",
       "Keep the genuine product brand. Do not show model names or model numbers anywhere in the image, including printed product markings and overlays. Remove SKU/article overlays, supplier labels and service text without changing the real product geometry.",
       "Identity outranks angle variety: use another supplied view, safe crop or layout if an unseen angle would require inventing geometry.",
       "Every SKU requires its own five-scene creative brief based on verified facts and source photos. Do not select a fixed generic background or the same five layouts for all products.",
@@ -44,6 +45,13 @@
       "scope": "global",
       "date": "2026-09-17",
       "reason": "User explicitly confirmed: no model in photographs, description or title. Genuine brand remains.",
+      "visualExamplesApproved": false
+    },
+    {
+      "version": 4,
+      "scope": "global",
+      "date": "2026-09-22",
+      "reason": "User reported black contours and requested rechecking and correction. Every photo must fill the square to opaque edges and corners; black contours, black corners, halos and vignettes are rejection conditions.",
       "visualExamplesApproved": false
     }
   ]

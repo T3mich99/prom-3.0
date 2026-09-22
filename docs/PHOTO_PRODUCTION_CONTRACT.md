@@ -126,6 +126,12 @@ product remains black; subtle localized contact shadows are permitted. This is a
 operator visual check, not an automatic pixel classifier. The real user-provided style collage is stored in references/photos/global; it is
 style-only evidence and does not verify any supplier specifications.
 
+The persistent global correction in photo-styles version 4 adds a full-bleed
+boundary check. An accepted frame is fully opaque and reaches all four edges and
+corners. Transparent or cutout borders, checkerboard areas, black corners, black
+contours, dark vignettes and halos fail review and require regeneration before
+the photo enters a gallery or workbook.
+
 ## Individual concepts are mandatory in CATEGORY_PRODUCTION
 
 PHOTO_ART_DIRECTION precedes generation. Codex supplies `photoCreativeBrief` with

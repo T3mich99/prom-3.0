@@ -162,6 +162,14 @@ test('keyword-stuffed title is reworked', () => {
   assert.equal(validateCommercialContentArtifact(value).fields.title.issues.some((item) => item.code === 'TITLE_KEYWORD_STUFFING'), true);
 });
 
+test('incomplete purpose phrase in title is reworked', () => {
+  const value = validArtifact();
+  value.content.title.ua = 'Масажер щітка для: точний вибір';
+  const result = validateCommercialContentArtifact(value);
+  assert.equal(result.fields.title.status, 'REWORK');
+  assert.equal(result.fields.title.issues.some((item) => item.code === 'TITLE_INCOMPLETE_PURPOSE'), true);
+});
+
 test('unsupported model in title is reworked when traceable', () => {
   const value = validArtifact();
   value.content.title.ua = 'Фен VGR V-999 2200 Вт чорний';

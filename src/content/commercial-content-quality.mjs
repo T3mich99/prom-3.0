@@ -238,6 +238,10 @@ function titleIssues(title, sourceFacts, policy, language) {
   const brand = localizedFactValue(factValue(sourceFacts, ['brand', 'бренд', 'manufacturer', 'виробник']), language);
   const model = localizedFactValue(factValue(sourceFacts, ['model', 'модель']), language);
 
+  if (/(?<![\p{L}])для\s*:\s*/iu.test(title) || /(?<![\p{L}])для\s*$/iu.test(title.trim())) {
+    issues.push(issue('TITLE_INCOMPLETE_PURPOSE', 'rework', 'title', 'title contains an incomplete purpose phrase; state what the product is for and remove a dangling "для:"'));
+  }
+
   if (type !== undefined && !firstWordMatchesFact(title, type)) {
     issues.push(issue('TITLE_COMMERCIAL_STRUCTURE_WEAK', 'rework', 'title', 'title does not begin with the verified product type', { expectedType: type }));
   }

@@ -34,6 +34,7 @@ const SYSTEM_PROMPT = [
   'Generate Russian and Ukrainian fields independently; do not translate or copy one language into the other.',
   'Never include model names or model numbers in titles or descriptions, including description headings and specification sections, even when verified. Keep the genuine brand; keep model data only in source facts for identity.',
   'Title order: product type, main feature, brand, useful verified characteristics, and verified color near the end.',
+  'Titles must state the product purpose clearly when it is verified. Never leave a dangling purpose phrase such as "для:" or "для"; name what the product is for instead of inserting a generic slogan after the preposition.',
   'Descriptions open with a concrete buyer outcome or use scenario, then use the sections Переваги/Преимущества, Особливості/Особенности, Підходить для/Подходит для, and Характеристики.',
   'Never generate a Комплектація, Комплектация, Комплект поставки, Что входит в комплект, or Що входить у комплект section.',
   'Keywords are 25–35 natural comma-separated search phrases per language, targeted to 800–1000 characters, with no duplicates, language mixing, price phrases, or unsupported facts.',
