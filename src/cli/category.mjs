@@ -70,7 +70,7 @@ export async function runCategoryCli(argv, { runner = runCategoryProduction, boo
       // an existing registry when a newer export requires reconciliation.
       await fs.mkdir(path.dirname(workflowPath), { recursive: true });
       await fs.writeFile(workflowPath + '.tmp', JSON.stringify({ ...workflow,
-        catalogPath: path.relative(root, templatePath) }, null, 2) + '\n');
+        catalogPath: path.relative(root, templatePath).split(path.sep).join('/') }, null, 2) + '\n');
       await fs.rename(workflowPath + '.tmp', workflowPath);
     }
     if (request.export) request.export = { ...request.export, inputPath: boot.masterTemplatePath, outputPath: path.resolve(root, request.export.outputPath) };
