@@ -25,13 +25,35 @@ function parsePrice(value) {
 }
 
 function parseCard(raw, { origin }) {
-  const get = (pattern) => raw.match(pattern)?.[1] ?? '';
-  const supplierSku = decodeHtml(get(/cs-product-list__sku[\s\S]*?<span\b[^>]*title="([^"]+)"/iu));
-  const sourceUrl = absoluteUrl(decodeHtml(get(/data-product-url="([^"]+)"/iu)), origin);
-  const title = decodeHtml(get(/data-product-name="([^"]+)"/iu));
-  const sourceImageUrl = absoluteUrl(decodeHtml(get(/data-product-big-picture="([^"]+)"/iu)), origin);
-  const price = parsePrice(get(/data-product-price="([^"]+)"/iu));
-  const sourceProductId = decodeHtml(get(/^<li\b[^>]*data-product-id="([^"]+)"/iu));
+  const getFirst = (patterns) => {
+    for (const pattern of patterns) {
+      const value = raw.match(pattern)?.[1] ?? '';
+      if (value) return value;
+    }
+    return '';
+  };
+  const supplierSku = decodeHtml(getFirst([
+    /cs-product-list__sku[\s\S]*?<span\b[^>]*title="([\p{L}\p{N}_-]+)"/iu,
+  ]));
+  const sourceUrl = absoluteUrl(decodeHtml(getFirst([
+    /data-product-url="([^"]+)"/iu,
+    /class="[^"]*cs-goods-title[^"]*"[^>]*href="([^"]+)"/iu,
+  ])), origin);
+  const title = decodeHtml(getFirst([
+    /data-product-name="([^"]+)"/iu,
+    /class="[^"]*cs-goods-title[^"]*"[^>]*>\s*([^<]+?)\s*<\/a>/iu,
+  ]));
+  const sourceImageUrl = absoluteUrl(decodeHtml(getFirst([
+    /data-product-big-picture="([^"]+)"/iu,
+    /class="[^"]*cs-product-list__image[^"]*"[^>]*src="([^"]+)"/iu,
+  ])), origin);
+  const price = parsePrice(getFirst([
+    /data-product-price="([^"]+)"/iu,
+    /class="[^"]*cs-goods-price__value[^"]*"[^>]*>\s*([^<]+?)\s*</iu,
+  ]));
+  const sourceProductId = decodeHtml(getFirst([
+    /^<li\b[^>]*data-product-id="([^"]+)"/iu,
+  ]));
 
   if (!sourceProductId || !supplierSku || !sourceUrl || !title) return null;
 

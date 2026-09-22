@@ -17,6 +17,16 @@ const card = ({ id, sku, url, title, price = '230 грн', image = '/images/prod
   </a>
 </li>`;
 
+const currentCard = ({ id, sku, url, title, price = '230 ₴', image = '/images/product.jpg' }) => `
+<li class="cs-product-list__item js-productad" data-product-id="${id}">
+  <div class="cs-product-list__image-wrap"><a class="cs-goods-title" href="${url}"><img class="cs-product-list__image" src="${image}" /></a></div>
+  <div class="cs-product-list__info-panel">
+    <div class="cs-product-list__title"><a class="cs-goods-title" href="${url}">${title}</a></div>
+    <div class="cs-goods-price"><span class="cs-goods-price__value cs-goods-price__value_type_product-list">${price}</span></div>
+    <div class="cs-product-list__order-panel"><div class="cs-product-list__sku cs-goods-sku" title="Код:"><span title="Код:"><span title="${sku}">${sku}</span></span></div></div>
+  </div>
+</li>`;
+
 test('parses UG-OPT cards in source order with traceable identity and URL', () => {
   const result = parseUgoptCategoryHtml(page({
     cards: [
@@ -33,6 +43,19 @@ test('parses UG-OPT cards in source order with traceable identity and URL', () =
   assert.equal(result.candidates[1].product.price, 1234);
   assert.equal(result.candidates[2].product.supplierSku, 'Ab-001');
   assert.equal(result.pageCount, 1);
+});
+
+test('parses the current UG-OPT card markup after data-product attributes were removed', () => {
+  const result = parseUgoptCategoryHtml(page({
+    cards: currentCard({ id: 201, sku: '34162', url: '/ua/p201-item.html', title: 'Поясний ремінь', price: '1 010 ₴', image: '/images/current.jpg' }),
+  }));
+
+  assert.equal(result.candidates.length, 1);
+  assert.equal(result.candidates[0].selectionKey, 'ugopt:34162');
+  assert.equal(result.candidates[0].product.sourceUrl, 'https://ug-opt.in.ua/ua/p201-item.html');
+  assert.equal(result.candidates[0].product.title, 'Поясний ремінь');
+  assert.equal(result.candidates[0].product.price, 1010);
+  assert.equal(result.candidates[0].product.sourceImageUrl, 'https://ug-opt.in.ua/images/current.jpg');
 });
 
 test('keeps an empty valid category distinct from parser input failure', () => {
