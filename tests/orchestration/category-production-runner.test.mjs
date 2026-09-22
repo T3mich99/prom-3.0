@@ -144,6 +144,55 @@ test('CATEGORY_PRODUCTION reaches PR22 pricing without market evidence or a rese
   assert.equal(result.operatorTasks[0].taskType, 'CONTENT_GENERATION');
 });
 
+test('CATEGORY_PRODUCTION normalizes structured supplier source text for content generation', async () => {
+  const productKey = 'ugopt:structured-source-text';
+  const result = await runCategoryProduction({
+    categoryUrl: 'https://ug-opt.in.ua/ua/category',
+  }, {
+    collector: async () => ({
+      resolution: 'resolved',
+      candidates: [{
+        selectionKey: productKey,
+        product: {
+          supplier: 'ug-opt',
+          supplierSku: 'structured-source-text',
+          title: 'Товар зі структурованими фактами',
+          price: 100,
+          sourceUrl: 'https://ug-opt.in.ua/ua/p-structured-source-text',
+          sourceImageUrl: 'https://images.prom.ua/structured-source-text.jpg',
+        },
+      }],
+      pagesFetched: 1,
+    }),
+    productDetailCollector: async () => ({
+      productKey,
+      version: 1,
+      status: 'READY',
+      sourceUrl: 'https://ug-opt.in.ua/ua/p-structured-source-text',
+      sourceFacts: { type: { ru: 'Товар', ua: 'Товар' }, size: '10 см' },
+      sourceText: {
+        language: 'uk',
+        title: 'Товар зі структурованими фактами',
+        description: 'Опис постачальника',
+        characteristics: [{ name: 'Розмір', value: '10 см' }],
+      },
+      sourceImages: [{ id: `${productKey}-source-1`, reference: 'https://images.prom.ua/structured-source-text.jpg' }],
+      diagnostics: [],
+      provenance: { supplier: 'ug-opt', authority: 'official-product-page' },
+    }),
+    registry: { byCode: {}, collisions: [] },
+  });
+
+  const task = result.operatorTasks.find((item) => item.taskType === 'CONTENT_GENERATION');
+  assert.ok(task);
+  assert.deepEqual(task.input.sourceText, {
+    language: 'uk',
+    title: 'Товар зі структурованими фактами',
+    description: 'Опис постачальника',
+    characteristics: 'Розмір: 10 см',
+  });
+});
+
 test('CATEGORY_PRODUCTION ranking uses economic signals when market evidence is absent', async () => {
   const result = await runCategoryProduction({ categoryUrl: 'https://ug-opt.in.ua/ua/category' }, {
     collector: async () => ({

@@ -141,6 +141,21 @@ test('localized type and brand are required while model is omitted from RU and U
   assert.equal(result.fields.title.issues.length, 0);
 });
 
+test('model-like numeric prefix in the source type may be omitted from public titles', () => {
+  const value = validArtifact({
+    sourceFacts: {
+      ...sourceFacts(),
+      type: { ru: '3D Фен', ua: '3D Фен' },
+    },
+  });
+  value.content.title = {
+    ru: 'Фен VGR 2200 Вт черный',
+    ua: 'Фен VGR 2200 Вт чорний',
+  };
+  const result = validateCommercialContentArtifact(value);
+  assert.equal(result.fields.title.status, 'READY');
+});
+
 test('keyword-stuffed title is reworked', () => {
   const value = validArtifact();
   value.content.title.ua = 'Фен фен фен VGR 2200 Вт';

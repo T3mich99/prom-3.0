@@ -132,7 +132,8 @@ function containsFactValue(text, value) {
 
 function firstWordMatchesFact(text, value) {
   const textWord = normalizedWords(text)[0];
-  const factWord = normalizedWords(value)[0];
+  const factWords = normalizedWords(value);
+  const factWord = factWords.find((word) => !/^\d[\p{L}\d-]*$/u.test(word)) ?? factWords[0];
   return Boolean(textWord && factWord && textWord === factWord);
 }
 

@@ -50,6 +50,27 @@ function text(value) {
   return value === null || value === undefined ? '' : String(value).trim();
 }
 
+function sourceTextForGeneration(value) {
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => {
+    if (typeof item === 'string') return [key, item];
+    if (Array.isArray(item)) {
+      const lines = item.map((entry) => {
+        if (isRecord(entry)) {
+          const name = text(entry.name);
+          const entryValue = text(entry.value);
+          if (name && entryValue) return `${name}: ${entryValue}`;
+          return name || entryValue;
+        }
+        return text(entry);
+      }).filter(Boolean);
+      return [key, lines.join('\n')];
+    }
+    if (item === null || item === undefined) return [key, ''];
+    return [key, isRecord(item) ? JSON.stringify(item) : String(item)];
+  }));
+}
+
 function requiredString(value, label) {
   if (!text(value)) throw new TypeError(`${label} must be a non-empty string`);
   return text(value);
@@ -251,9 +272,9 @@ function jobFor(category, candidate, input, options) {
   };
   if (evidence !== undefined) job.sourceEvidence = clone(evidence);
   for (const key of ['supplierState', 'pricingProduct', 'sourceText', 'marketEvidence', 'pricingDecision', 'contentArtifact', 'photoArtifact', 'approvedMedia', 'characteristicMapping', 'photoCreativeBrief']) {
-    if (input[key] !== undefined) job[key] = clone(input[key]);
+    if (input[key] !== undefined) job[key] = key === 'sourceText' ? sourceTextForGeneration(input[key]) : clone(input[key]);
   }
-  if (evidence?.sourceText !== undefined) job.sourceText = clone(evidence.sourceText);
+  if (evidence?.sourceText !== undefined) job.sourceText = sourceTextForGeneration(evidence.sourceText);
   const metadata = input.resolvedMetadata ?? options.categoryMetadata?.[category.requestKey];
   if (metadata !== undefined) job.resolvedMetadata = clone(metadata);
   return job;
@@ -378,11 +399,22 @@ async function resumeRequest(request, stateStore, runId) {
       delete input.approvedMedia;
     }
   }
-  return {
-    ...request,
-    productInputs: Object.fromEntries([...new Set([...Object.keys(persistedInputs), ...Object.keys(request.productInputs)])]
-      .map((key) => [key, { ...persistedInputs[key], ...request.productInputs[key] }])),
-  };
+  const requestInputs = isRecord(request.productInputs) ? request.productInputs : {};
+  const mergedInputs = Object.fromEntries([...new Set([...Object.keys(persistedInputs), ...Object.keys(requestInputs)])]
+    .map((key) => {
+      const persistedInput = persistedInputs[key] ?? {};
+      const currentInput = requestInputs[key] ?? {};
+      const merged = { ...persistedInput, ...currentInput };
+      // A newly supplied full photo artifact must be validated from its current
+      // bytes. A stale approvedMedia record from an earlier attempt can only
+      // produce a false APPROVED_MEDIA_MISMATCH, so discard it unless the
+      // current request explicitly supplies the matching artifact as well.
+      if (currentInput.photoArtifact !== undefined && currentInput.approvedMedia === undefined) {
+        delete merged.approvedMedia;
+      }
+      return [key, merged];
+    }));
+  return { ...request, productInputs: mergedInputs };
 }
 
 /**
