@@ -47,6 +47,13 @@ values (including localized values and separator variants) trigger REWORK.
 Numeric characteristics must remain traceable to `sourceFacts`. Price, promotion, supplier metadata, unsupported
 claims, and obvious repeated-token stuffing are rejected.
 
+Supplier exports sometimes place a full warehouse title in `sourceFacts.type`,
+including a code, a unit marker, or Ukrainian wording in the RU slot. That
+value remains factual authority for identity and claims, but the editorial
+structure check uses only a short readable type cue when the value is suitable
+for public wording. Internal feed noise is never copied into a title or
+description merely to satisfy the checker.
+
 The validator does not claim to replace a literary editor or guarantee a sale.
 It does enforce objective readability conditions below; any rejected condition
 requires content rework before the product can continue to photos or Excel.

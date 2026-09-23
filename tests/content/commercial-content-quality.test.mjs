@@ -166,6 +166,22 @@ test('model-like numeric prefix in the source type may be omitted from public ti
   assert.equal(result.fields.title.status, 'READY');
 });
 
+test('warehouse title noise in a localized source type does not force public copy to repeat it', () => {
+  const value = validArtifact({
+    sourceFacts: {
+      ...sourceFacts(),
+      type: { ru: 'Масажер для обличчя 1251', ua: 'Масажер для обличчя 1251' },
+    },
+  });
+  value.content.title = {
+    ru: 'Электрический массажер для лица VGR',
+    ua: 'Електричний масажер для обличчя VGR',
+  };
+  const result = validateCommercialContentArtifact(value);
+  assert.equal(result.fields.title.issues.some((item) => item.code === 'TITLE_COMMERCIAL_STRUCTURE_WEAK'), false);
+  assert.equal(result.fields.description.issues.some((item) => item.code === 'DESCRIPTION_EDITORIAL_OPENING_MISALIGNED'), false);
+});
+
 test('keyword-stuffed title is reworked', () => {
   const value = validArtifact();
   value.content.title.ua = 'Фен фен фен VGR 2200 Вт';

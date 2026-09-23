@@ -71,7 +71,7 @@ const NUMBER_WITH_UNIT_PATTERN = /(?<![\p{L}\p{N}])(\d+(?:[.,]\d+)?)\s*(?:вт|w
 const MODEL_PATTERN = /(?<![\p{L}\p{N}])([A-Za-zА-Яа-яІіЇїЄєҐґ]{1,8}[-_/]?\d{2,6}[A-Za-zА-Яа-яІіЇїЄєҐґ]?)(?![\p{L}\p{N}])/gu;
 const UA_MARKER_PATTERN = /[іїєґ]/iu;
 const RU_MARKER_PATTERN = /[ыэъё]/iu;
-const UA_WORD_MARKER_PATTERN = /(?<![\p{L}])(?:допомагає|зручно|підходить|волосся|чорний|підтримує|захищає|полегшує)(?![\p{L}])/iu;
+const UA_WORD_MARKER_PATTERN = /(?<![\p{L}])(?:допомагає|зручно|підходить|волосся|чорний|підтримує|захищає|полегшує|масажер|обличчя|голови|шиї|коліна|спини|пір|під|еластичний|щітка|м’язовий|м'язовий|міостимулятор|пінцет)(?![\p{L}])/iu;
 const RU_WORD_MARKER_PATTERN = /(?<![\p{L}])(?:помогает|удобно|подходит|волос|черный|поддерживает|защищает|облегчает)(?![\p{L}])/iu;
 const EDITORIAL_BOILERPLATE_PATTERNS = [
   /опис\s+товару\s+допомагає\s+покупцеві|описание\s+товара\s+помогает\s+покупателю/iu,
@@ -163,6 +163,39 @@ function firstWordMatchesFact(text, value) {
   const factWords = normalizedWords(value);
   const factWord = factWords.find((word) => !/^\d[\p{L}\d-]*$/u.test(word)) ?? factWords[0];
   return Boolean(textWord && factWord && textWord === factWord);
+}
+
+// Supplier feeds often place the complete warehouse title in `sourceFacts.type`,
+// including an internal code, a unit marker, or Ukrainian text in the RU slot.
+// Such a value remains useful for identity and claim checks, but is not a safe
+// public-language cue for an editorial opening or title structure check.
+function readableEditorialType(sourceFacts, language) {
+  const type = localizedFactValue(factValue(sourceFacts, ['type', 'productType', 'product_type', 'тип', 'типтовару']), language);
+  if (typeof type !== 'string') return undefined;
+  const normalized = normalizeText(type);
+  const words = normalizedWords(normalized);
+  if (words.length === 0 || words.length > 7 || /\d/gu.test(normalized) || /(?:^|\s)шт\.?(?:\s|$)/iu.test(normalized)) return undefined;
+  const otherLanguage = editorialLanguageMarker(normalized, language);
+  if (otherLanguage !== null && otherLanguage !== language) return undefined;
+  return normalized;
+}
+
+function typeCueAppears(text, type) {
+  const textWords = normalizedWords(text);
+  const typeWords = normalizedWords(type).filter((word) => word.length > 2 && !TITLE_STOP_WORDS.has(word));
+  if (typeWords.length === 0) return false;
+  const normalizedText = normalizeText(text).toLocaleLowerCase('uk-UA');
+  return typeWords.some((typeWord) => textWords.some((textWord) => {
+    if (textWord === typeWord) return true;
+    const normalizedTypeWord = typeWord.replace(/гальтер/gu, 'галтер');
+    const normalizedTextWord = textWord.replace(/гальтер/gu, 'галтер');
+    const compactTypeWord = normalizedTypeWord.replace(/[\p{P}\p{S}]/gu, '');
+    const compactTextWord = normalizedTextWord.replace(/[\p{P}\p{S}]/gu, '');
+    return compactTextWord === compactTypeWord
+      || compactTextWord.includes(compactTypeWord)
+      || compactTypeWord.includes(compactTextWord)
+      || normalizedText.includes(typeWord);
+  }));
 }
 
 function extractModelTokens(text) {
@@ -323,7 +356,7 @@ function titleEditorialIssues(title, sourceFacts, policy, language) {
   }
   // A source type is used here only as a readability signal: the commercial
   // title rules above remain the authority for factual type matching.
-  const type = localizedFactValue(factValue(sourceFacts, ['type', 'productType', 'product_type', 'тип', 'типтовару']), language);
+  const type = readableEditorialType(sourceFacts, language);
   if (type !== undefined && normalizedWords(normalized).length < 2) {
     issues.push(issue('TITLE_EDITORIAL_TOO_SPARSE', 'rework', 'title', 'title does not provide enough readable product context', { language, type }));
   }
@@ -345,14 +378,14 @@ function descriptionEditorialIssues(description, sourceFacts, policy, language) 
     issues.push(issue('DESCRIPTION_EDITORIAL_SENTENCES_TOO_FEW', 'rework', 'description', 'description must read as a coherent commercial text with several complete sentences', { language, sentences: sentences.length, minimum: policy.minimumDescriptionSentences }));
   }
   const opening = sentences[0] ?? visible.slice(0, 360);
-  const type = localizedFactValue(factValue(sourceFacts, ['type', 'productType', 'product_type', 'тип', 'типтовару']), language);
-  if (type !== undefined && !containsFactValue(opening, type)) {
+  const type = readableEditorialType(sourceFacts, language);
+  if (type !== undefined && !typeCueAppears(opening, type)) {
     issues.push(issue('DESCRIPTION_EDITORIAL_OPENING_MISALIGNED', 'rework', 'description', 'opening does not identify the verified product type before the sales argument', { language, type }));
   }
   if (policy.requireBuyerBenefitOpening) {
     const openingText = opening.slice(0, 420);
     const benefitPattern = language === 'ua'
-      ? /(?:допомага|зручно|підтрим|полегш|захищ|очищ|суш|уклад|догляд|тренув|розслаб|зберіг|підходить|дозволяє|поможе)/iu
+      ? /(?:допомага|зручно|підтрим|полегш|захищ|очищ|суш|уклад|догляд|тренув|розслаб|зберіг|підходить|дозволяє|дає\s+змогу|поможе)/iu
       : /(?:помога|удоб|поддерж|облегч|защищ|очищ|суш|уклад|уход|тренир|расслаб|хран|подходит|позвол|поможет)/iu;
     if (!benefitPattern.test(openingText)) {
       issues.push(issue('DESCRIPTION_EDITORIAL_OPENING_WEAK', 'rework', 'description', 'opening lacks a concrete buyer benefit or use scenario', { language }));
@@ -395,7 +428,7 @@ function repeatedOpeningIssues(artifact, editorialHistory) {
 
 function titleIssues(title, sourceFacts, policy, language) {
   const issues = [];
-  const type = localizedFactValue(factValue(sourceFacts, ['type', 'productType', 'product_type', 'тип', 'типтовару']), language);
+  const type = readableEditorialType(sourceFacts, language);
   const brand = localizedFactValue(factValue(sourceFacts, ['brand', 'бренд', 'manufacturer', 'виробник']), language);
   const model = localizedFactValue(factValue(sourceFacts, ['model', 'модель']), language);
 
@@ -403,7 +436,7 @@ function titleIssues(title, sourceFacts, policy, language) {
     issues.push(issue('TITLE_INCOMPLETE_PURPOSE', 'rework', 'title', 'title contains an incomplete purpose phrase; state what the product is for and remove a dangling "для:"'));
   }
 
-  if (type !== undefined && !firstWordMatchesFact(title, type)) {
+  if (type !== undefined && !typeCueAppears(title, type)) {
     issues.push(issue('TITLE_COMMERCIAL_STRUCTURE_WEAK', 'rework', 'title', 'title does not begin with the verified product type', { expectedType: type }));
   }
   if (brand !== undefined && !containsFactValue(title, brand)) {
