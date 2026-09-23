@@ -15,7 +15,7 @@ import {
   validateContentGenerationInput,
 } from './content-generation-prompt.mjs';
 
-const INITIAL_INPUT_OPTIONS = new Set(['generator', 'policy', 'commercialPolicy', 'profile']);
+const INITIAL_INPUT_OPTIONS = new Set(['generator', 'policy', 'commercialPolicy', 'profile', 'editorialHistory']);
 const REWORK_INPUT_KEYS = new Set(['artifact', 'quality', 'sourceFacts']);
 const RESPONSE_TOP_LEVEL_KEYS = new Set(['content', 'claims']);
 const REWORK_RESPONSE_TOP_LEVEL_KEYS = new Set(['content']);
@@ -49,6 +49,9 @@ function validateOptions(options) {
   if (options.commercialPolicy !== undefined && !isRecord(options.commercialPolicy)) {
     throw new TypeError('options.commercialPolicy must be an object');
   }
+  if (options.editorialHistory !== undefined && !Array.isArray(options.editorialHistory)) {
+    throw new TypeError('options.editorialHistory must be an array');
+  }
 }
 
 function qualityFor(artifact, options) {
@@ -57,6 +60,7 @@ function qualityFor(artifact, options) {
     const qualityOptions = {};
     if (options.policy !== undefined) qualityOptions.basePolicy = options.policy;
     if (options.commercialPolicy !== undefined) qualityOptions.policy = options.commercialPolicy;
+    if (options.editorialHistory !== undefined) qualityOptions.editorialHistory = options.editorialHistory;
     return validateCommercialContentArtifact(artifact, qualityOptions);
   }
   return validateContentArtifact(artifact, options.policy === undefined ? {} : { policy: options.policy });

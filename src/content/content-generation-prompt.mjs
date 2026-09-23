@@ -32,6 +32,10 @@ const SYSTEM_PROMPT = [
   'Omit unknown specifications; never make reasonable assumptions.',
   'Return one strict JSON object only. Do not use Markdown, commentary, or code fences.',
   'Generate Russian and Ukrainian fields independently; do not translate or copy one language into the other.',
+  'Editorial quality is a hard gate, not a suggestion: every title and description must be idiomatic, grammatically clean, easy to read, and written as native marketplace copy in its own language.',
+  'Do not use literal translation, Ukrainian words in Russian, Russian words in Ukrainian, awkward noun chains, filler, warehouse labels such as "шт", empty slogans, or reusable boilerplate such as "практичный товар для" and "опис товара помогает покупателю".',
+  'Make every product card specific: name the real buyer problem or use situation in the opening, explain concrete verified benefits, vary the wording and sentence rhythm, and make the text useful enough to support a purchase decision without exaggerated promises.',
+  'Before returning JSON, proofread both language versions separately for grammar, word choice, punctuation, natural collocations, and clarity. Rewrite any sentence that sounds machine-translated or generic.',
   'Never include model names or model numbers in titles or descriptions, including description headings and specification sections, even when verified. Keep the genuine brand; keep model data only in source facts for identity.',
   'Title order: product type, main feature, brand, useful verified characteristics, and verified color near the end.',
   'Titles must state the product purpose clearly when it is verified. Never leave a dangling purpose phrase such as "для:" or "для"; name what the product is for instead of inserting a generic slogan after the preposition.',
@@ -149,6 +153,7 @@ export function buildContentGenerationRequest(input) {
     prompt: [
       'Create a complete Content Artifact v1 content payload for the requested product.',
       'Write separate natural Russian and Ukrainian commercial marketplace content. Use buyer-benefit openings and category-specific scenarios, not generic boilerplate.',
+      'Pass the editorial gate: every title and description must read like polished native marketplace copy, with correct grammar, natural collocations, a clear product purpose, a specific buyer benefit, and wording that is distinct for this product. A merely long or structurally complete text is not acceptable.',
       'Titles must use the order type + main feature + brand + important verified characteristics + color when known; omit unknown elements without placeholders.',
       'Descriptions may be detailed when verified facts support it, must be at least 1000 visible characters, and must not contain a completeness/package section.',
       'Keywords must contain 25–35 real search phrases in each language and target 800–1000 characters; do not duplicate one list into the other, mix languages, or use cosmetic spam.',
@@ -199,6 +204,7 @@ export function buildContentReworkRequest({ productKey, sourceFacts, fields, pre
       `PREVIOUS VALUES FOR REQUESTED FIELDS ONLY:\n${stableJson(previousValues)}`,
       `Return exactly {"content":{${targetNames.map((field) => `"${field}": ...`).join(',')}}}. Do not return claims or any other top-level key.`,
       'Preserve verified facts, use separate RU and UA values, and omit unsupported details.',
+      'Repair literary quality as well as formal structure: remove literal translations, mixed-language words, warehouse noise, generic slogans, repeated boilerplate, and weak openings. Keep the commercial argument specific to this product and proofread each language independently.',
     ].join('\n\n'),
     responseFormat: { ...RESPONSE_FORMAT },
     metadata: {

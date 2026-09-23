@@ -15,8 +15,11 @@ function keywordsAtLength(length) {
   return `${base}${'x'.repeat(length - base.length)}`;
 }
 
-function longText(prefix) {
-  return Array.from({ length: 45 }, (_, index) => `${prefix} пояснює перевагу та спосіб використання номер ${index + 1}`).join(' ');
+function longText(prefix, language = 'ua') {
+  const tail = language === 'ru'
+    ? 'помогает понять пользу и способ использования'
+    : 'пояснює перевагу та спосіб використання';
+  return Array.from({ length: 45 }, (_, index) => `${prefix} ${tail}, абзац ${index + 1}.`).join(' ');
 }
 
 function artifact(overrides = {}) {
@@ -25,7 +28,10 @@ function artifact(overrides = {}) {
     version: 1,
     content: {
       title: { ru: 'Фен для волос', ua: 'Фен для волосся' },
-      description: { ru: longText('Описание товара'), ua: longText('Опис товару') },
+      description: {
+        ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'),
+        ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua'),
+      },
       keywords: { ru: keywordsAtLength(800), ua: keywordsAtLength(800) },
       characteristics: [{ name: 'Мощность', value: '2200 Вт' }],
     },

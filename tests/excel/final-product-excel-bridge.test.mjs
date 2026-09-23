@@ -16,7 +16,7 @@ import { inspectWorkbook } from '../../src/excel/template-inspector.mjs';
 import { mapTemplateSchema } from '../../src/excel/schema-mapper.mjs';
 import { createWorkbook, cleanupTempDir, fileHash, loadWorkbook, makeTempDir } from './support.mjs';
 
-function description(length = 1400, prefix = 'Опис товару пояснює покупцеві користь та практичне використання') {
+function description(length = 1400, prefix = 'Фен допомагає швидко висушити волосся та зручно підготувати його до щоденного укладання') {
   return Array.from({ length }, (_, index) => `${prefix}, абзац ${index + 1}.`).join(' ').slice(0, length);
 }
 
@@ -33,7 +33,10 @@ function contentArtifact(productKey = 'ugopt:bridge-1') {
     sourceFacts: { type: 'фен', brand: 'VGR', model: 'V-451', power: '2200 Вт', color: 'чорний' },
     content: {
       title: { ru: 'Фен VGR 2200 Вт черный', ua: 'Фен VGR 2200 Вт чорний' },
-      description: { ru: description(1400, 'Описание товара объясняет покупателю пользу и практическое применение'), ua: description() },
+      description: {
+        ru: description(1400, 'Фен помогает быстро высушить волосы и удобно подготовить их к ежедневной укладке'),
+        ua: description(),
+      },
       keywords: { ru: keywords('ru'), ua: keywords('ua') },
       characteristics: [{ name: 'Потужність', value: '2200 Вт' }, { name: 'Колір', value: 'чорний' }],
     },

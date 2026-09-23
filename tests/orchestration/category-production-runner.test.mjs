@@ -43,8 +43,11 @@ function pricingPolicy() {
   };
 }
 
-function longText(prefix) {
-  return Array.from({ length: 45 }, (_, index) => `${prefix} пояснює користь товару та спосіб використання номер ${index + 1}`).join(' ');
+function longText(prefix, language = 'ua') {
+  const tail = language === 'ru'
+    ? 'помогает понять пользу товара и способ использования'
+    : 'пояснює користь товару та спосіб використання';
+  return Array.from({ length: 45 }, (_, index) => `${prefix} ${tail}, абзац ${index + 1}.`).join(' ');
 }
 
 function keywords(language) {
@@ -56,12 +59,16 @@ function keywords(language) {
 }
 
 function readyContentArtifact(productKey, sourceFacts) {
+  const alternate = productKey.endsWith('b');
   return {
     productKey,
     version: 1,
     content: {
       title: { ru: 'Фен для волос', ua: 'Фен для волосся' },
-      description: { ru: longText('Описание товара'), ua: longText('Опис товару') },
+      description: {
+        ru: longText(alternate ? 'Фен удобно сушит волосы и помогает подготовить их к укладке' : 'Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'),
+        ua: longText(alternate ? 'Фен зручно сушить волосся та допомагає підготувати його до укладання' : 'Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua'),
+      },
       keywords: { ru: keywords('ru'), ua: keywords('ua') },
       characteristics: [{ name: 'Тип', value: 'Фен' }],
     },

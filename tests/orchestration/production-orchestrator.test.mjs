@@ -71,8 +71,11 @@ function hash(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-function longText(prefix) {
-  return Array.from({ length: 45 }, (_, index) => `${prefix} пояснює користь товару та спосіб використання номер ${index + 1}`).join(' ');
+function longText(prefix, language = 'ua') {
+  const tail = language === 'ru'
+    ? 'помогает понять пользу товара и способ использования'
+    : 'пояснює користь товару та спосіб використання';
+  return Array.from({ length: 45 }, (_, index) => `${prefix} ${tail}, абзац ${index + 1}.`).join(' ');
 }
 
 function keywordsAtLength(length = 900, language = 'uk') {
@@ -102,7 +105,10 @@ function contentArtifact(productKey, overrides = {}) {
     version: overrides.version ?? 1,
     content: {
       title: { ru: 'Фен для волос VGR черный', ua: 'Фен для волосся VGR чорний' },
-      description: { ru: longText('Описание товара'), ua: longText('Опис товару') },
+      description: {
+        ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'),
+        ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua'),
+      },
       keywords: { ru: keywordsAtLength(900, 'ru'), ua: keywordsAtLength(900, 'uk') },
       characteristics: [{ name: 'Потужність', value: '2200 Вт' }],
       ...(overrides.content ?? {}),
@@ -473,7 +479,10 @@ test('content field rework uses only the existing rework plan', async () => {
   const artifact = contentArtifact('content-rework-provider', { content: { description: { ru: 'short', ua: 'коротко' } } });
   const result = await advanceProductionProduct(readyMarketJob('content-rework-provider', { contentArtifact: artifact }), {
     pricing: pricingOptions(),
-    content: { generator: async (request) => ({ content: { description: { ru: longText('Исправленное описание'), ua: longText('Виправлений опис') } } }) },
+    content: { generator: async (request) => ({ content: { description: {
+      ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'),
+      ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua'),
+    } } }) },
   });
   assert.equal(result.workflowStatus, PRODUCTION_STATUSES.WAITING_FOR_PHOTOS);
   assert.equal(result.contentArtifact.version, 2);

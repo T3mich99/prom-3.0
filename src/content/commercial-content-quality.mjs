@@ -8,8 +8,9 @@ import {
 } from './content-quality.mjs';
 
 export const COMMERCIAL_CONTENT_PROFILE = 'commercial-prom-v2';
+export const COMMERCIAL_EDITORIAL_GATE = 'commercial-editorial-v1';
 
-const COMMERCIAL_POLICY_KEYS = new Set(['title', 'description', 'keywords']);
+const COMMERCIAL_POLICY_KEYS = new Set(['title', 'description', 'keywords', 'editorial']);
 const TITLE_POLICY_KEYS = new Set(['maxRepeatedTokenCount', 'rejectEconomicMetadata']);
 const DESCRIPTION_POLICY_KEYS = new Set(['forbidCompletenessSection']);
 const KEYWORD_POLICY_KEYS = new Set([
@@ -19,6 +20,13 @@ const KEYWORD_POLICY_KEYS = new Set([
   'maximumCharacters',
   'maximumDuplicateRatio',
   'rejectLanguageMix',
+]);
+const EDITORIAL_POLICY_KEYS = new Set([
+  'requireLanguageSeparation',
+  'rejectBoilerplate',
+  'requireBuyerBenefitOpening',
+  'minimumDescriptionSentences',
+  'maximumTitleCharacters',
 ]);
 
 function deepFreeze(value) {
@@ -45,6 +53,13 @@ export const DEFAULT_COMMERCIAL_CONTENT_POLICY = deepFreeze({
     maximumDuplicateRatio: 0,
     rejectLanguageMix: true,
   },
+  editorial: {
+    requireLanguageSeparation: true,
+    rejectBoilerplate: true,
+    requireBuyerBenefitOpening: true,
+    minimumDescriptionSentences: 3,
+    maximumTitleCharacters: 140,
+  },
 });
 
 const TITLE_STOP_WORDS = new Set([
@@ -56,6 +71,19 @@ const NUMBER_WITH_UNIT_PATTERN = /(?<![\p{L}\p{N}])(\d+(?:[.,]\d+)?)\s*(?:вт|w
 const MODEL_PATTERN = /(?<![\p{L}\p{N}])([A-Za-zА-Яа-яІіЇїЄєҐґ]{1,8}[-_/]?\d{2,6}[A-Za-zА-Яа-яІіЇїЄєҐґ]?)(?![\p{L}\p{N}])/gu;
 const UA_MARKER_PATTERN = /[іїєґ]/iu;
 const RU_MARKER_PATTERN = /[ыэъё]/iu;
+const UA_WORD_MARKER_PATTERN = /(?<![\p{L}])(?:допомагає|зручно|підходить|волосся|чорний|підтримує|захищає|полегшує)(?![\p{L}])/iu;
+const RU_WORD_MARKER_PATTERN = /(?<![\p{L}])(?:помогает|удобно|подходит|волос|черный|поддерживает|защищает|облегчает)(?![\p{L}])/iu;
+const EDITORIAL_BOILERPLATE_PATTERNS = [
+  /опис\s+товару\s+допомагає\s+покупцеві|описание\s+товара\s+помогает\s+покупателю/iu,
+  /практичн(?:ий|ый)\s+(?:товар|выбор)\s+для/iu,
+  /зручн(?:ий|ый)\s+товар/iu,
+  /основн(?:ий|ой)\s+акцент\s+(?:цього\s+виробу|этого\s+изделия)/iu,
+  /виріб\s+доречно\s+розглядати|изделие\s+удобно\s+рассматривать/iu,
+  /характеристик(?:и|и)\s+(?:які\s+можна\s+перевірити|которые\s+можно\s+проверить)/iu,
+  /допомагає\s+швидко\s+порівняти|помогает\s+быстро\s+сравнить/iu,
+];
+const GENERIC_TITLE_SLOGAN_PATTERN = /(?:для\s*:\s*|(?<![\p{L}])для\s+(?:точний|точный|ідеальний|идеальный|найкращий|лучший)\s+вибір(?![\p{L}]))/iu;
+const TITLE_UNIT_SUFFIX_PATTERN = /(?:^|\s)шт\.?$/iu;
 
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -191,7 +219,8 @@ export function resolveCommercialContentPolicy(override = {}) {
     if (!isRecord(values)) throw new TypeError(`commercial policy.${section} must be an object`);
     const allowed = section === 'title'
       ? TITLE_POLICY_KEYS
-      : section === 'description' ? DESCRIPTION_POLICY_KEYS : KEYWORD_POLICY_KEYS;
+      : section === 'description' ? DESCRIPTION_POLICY_KEYS
+        : section === 'keywords' ? KEYWORD_POLICY_KEYS : EDITORIAL_POLICY_KEYS;
     for (const key of Object.keys(values)) {
       if (!allowed.has(key)) throw new TypeError(`Unsupported commercial policy option: ${section}.${key}`);
     }
@@ -229,7 +258,139 @@ export function resolveCommercialContentPolicy(override = {}) {
   if (typeof merged.keywords.rejectLanguageMix !== 'boolean') {
     throw new TypeError('commercial policy.keywords.rejectLanguageMix must be boolean');
   }
+  for (const key of ['requireLanguageSeparation', 'rejectBoilerplate', 'requireBuyerBenefitOpening']) {
+    if (typeof merged.editorial[key] !== 'boolean') {
+      throw new TypeError(`commercial policy.editorial.${key} must be boolean`);
+    }
+  }
+  for (const key of ['minimumDescriptionSentences', 'maximumTitleCharacters']) {
+    if (!Number.isSafeInteger(merged.editorial[key]) || merged.editorial[key] < 1) {
+      throw new TypeError(`commercial policy.editorial.${key} must be a positive integer`);
+    }
+  }
   return deepFreeze(merged);
+}
+
+function editorialLanguageMarker(value, language) {
+  const text = normalizeText(value);
+  if (language === 'ua' && (RU_MARKER_PATTERN.test(text) || RU_WORD_MARKER_PATTERN.test(text))) return 'ru';
+  if (language === 'ru' && (UA_MARKER_PATTERN.test(text) || UA_WORD_MARKER_PATTERN.test(text))) return 'ua';
+  return null;
+}
+
+function editorialLanguageIssues(value, field, language, policy) {
+  if (!policy.requireLanguageSeparation || typeof value !== 'string') return [];
+  const otherLanguage = editorialLanguageMarker(value, language);
+  return otherLanguage === null ? [] : [issue(
+    `${field.toUpperCase()}_EDITORIAL_LANGUAGE_MIX`,
+    'rework',
+    field,
+    `the ${language.toUpperCase()} ${field} contains recognizable ${otherLanguage.toUpperCase()} language markers`,
+    { language, otherLanguage },
+  )];
+}
+
+function editorialBoilerplateIssues(value, field, policy) {
+  if (!policy.rejectBoilerplate || typeof value !== 'string') return [];
+  const text = normalizeText(value);
+  const matches = EDITORIAL_BOILERPLATE_PATTERNS
+    .filter((pattern) => pattern.test(text))
+    .map((pattern) => pattern.source);
+  return matches.length ? [issue(
+    `${field.toUpperCase()}_EDITORIAL_BOILERPLATE`,
+    'rework',
+    field,
+    'copy uses generic template language instead of product-specific commercial wording',
+    { matches },
+  )] : [];
+}
+
+function titleEditorialIssues(title, sourceFacts, policy, language) {
+  const issues = [
+    ...editorialLanguageIssues(title, 'title', language, policy),
+    ...editorialBoilerplateIssues(title, 'title', policy),
+  ];
+  if (typeof title !== 'string') return issues;
+  const normalized = normalizeText(title);
+  if (normalized.length > policy.maximumTitleCharacters) {
+    issues.push(issue('TITLE_EDITORIAL_TOO_LONG', 'rework', 'title', 'title is too long for a readable marketplace card', { language, characters: normalized.length, maximum: policy.maximumTitleCharacters }));
+  }
+  if (TITLE_UNIT_SUFFIX_PATTERN.test(normalized)) {
+    issues.push(issue('TITLE_EDITORIAL_UNIT_NOISE', 'rework', 'title', 'title ends with a warehouse unit marker such as "шт"', { language }));
+  }
+  if (GENERIC_TITLE_SLOGAN_PATTERN.test(normalized)) {
+    issues.push(issue('TITLE_EDITORIAL_PURPOSE_UNCLEAR', 'rework', 'title', 'title uses a generic slogan or incomplete purpose phrase instead of naming the use'));
+  }
+  // A source type is used here only as a readability signal: the commercial
+  // title rules above remain the authority for factual type matching.
+  const type = localizedFactValue(factValue(sourceFacts, ['type', 'productType', 'product_type', 'тип', 'типтовару']), language);
+  if (type !== undefined && normalizedWords(normalized).length < 2) {
+    issues.push(issue('TITLE_EDITORIAL_TOO_SPARSE', 'rework', 'title', 'title does not provide enough readable product context', { language, type }));
+  }
+  return issues;
+}
+
+function descriptionEditorialIssues(description, sourceFacts, policy, language) {
+  const issues = [
+    ...editorialLanguageIssues(description, 'description', language, policy),
+    ...editorialBoilerplateIssues(description, 'description', policy),
+  ];
+  if (typeof description !== 'string') return issues;
+  const visible = normalizeText(description);
+  const sentences = visible
+    .split(/[.!?]+|\s+[–-]\s+|\s*•\s*/u)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (sentences.length < policy.minimumDescriptionSentences) {
+    issues.push(issue('DESCRIPTION_EDITORIAL_SENTENCES_TOO_FEW', 'rework', 'description', 'description must read as a coherent commercial text with several complete sentences', { language, sentences: sentences.length, minimum: policy.minimumDescriptionSentences }));
+  }
+  const opening = sentences[0] ?? visible.slice(0, 360);
+  const type = localizedFactValue(factValue(sourceFacts, ['type', 'productType', 'product_type', 'тип', 'типтовару']), language);
+  if (type !== undefined && !containsFactValue(opening, type)) {
+    issues.push(issue('DESCRIPTION_EDITORIAL_OPENING_MISALIGNED', 'rework', 'description', 'opening does not identify the verified product type before the sales argument', { language, type }));
+  }
+  if (policy.requireBuyerBenefitOpening) {
+    const openingText = opening.slice(0, 420);
+    const benefitPattern = language === 'ua'
+      ? /(?:допомага|зручно|підтрим|полегш|захищ|очищ|суш|уклад|догляд|тренув|розслаб|зберіг|підходить|дозволяє|поможе)/iu
+      : /(?:помога|удоб|поддерж|облегч|защищ|очищ|суш|уклад|уход|тренир|расслаб|хран|подходит|позвол|поможет)/iu;
+    if (!benefitPattern.test(openingText)) {
+      issues.push(issue('DESCRIPTION_EDITORIAL_OPENING_WEAK', 'rework', 'description', 'opening lacks a concrete buyer benefit or use scenario', { language }));
+    }
+  }
+  return issues;
+}
+
+function editorialOpeningSignature(description) {
+  const visible = normalizeText(description);
+  const opening = visible.split(/[.!?]+/u)[0] ?? visible;
+  return opening.toLocaleLowerCase('uk-UA').replace(/\s+/gu, ' ').trim();
+}
+
+function repeatedOpeningIssues(artifact, editorialHistory) {
+  if (!Array.isArray(editorialHistory) || editorialHistory.length === 0) return [];
+  const issues = [];
+  for (const language of CONTENT_LANGUAGES) {
+    const current = artifact.content?.description?.[language];
+    if (typeof current !== 'string' || !current.trim()) continue;
+    const signature = editorialOpeningSignature(current);
+    if (signature.length < 40) continue;
+    const duplicate = editorialHistory.find((previous) => {
+      if (!isRecord(previous) || previous.productKey === artifact.productKey) return false;
+      const value = previous.content?.description?.[language];
+      return typeof value === 'string' && editorialOpeningSignature(value) === signature;
+    });
+    if (duplicate !== undefined) {
+      issues.push(issue(
+        'DESCRIPTION_EDITORIAL_REPEATED_OPENING',
+        'rework',
+        'description',
+        'description reuses the exact opening sentence of another product in the same batch',
+        { language, duplicateProductKey: duplicate.productKey },
+      ));
+    }
+  }
+  return issues;
 }
 
 function titleIssues(title, sourceFacts, policy, language) {
@@ -375,11 +536,14 @@ function reworkPlanFor(fields) {
 /**
  * Validate the existing Content Artifact v1 under the commercial Prom.ua
  * profile. Base Content Quality remains the structural authority; this layer
- * adds only deterministic commercial checks that can be defended from text or
- * verified sourceFacts.
+ * adds deterministic commercial and editorial checks that can be defended from
+ * text or verified sourceFacts.
  */
 export function validateCommercialContentArtifact(artifact, options = {}) {
   if (!isRecord(options)) throw new TypeError('commercial validation options must be an object');
+  if (options.editorialHistory !== undefined && !Array.isArray(options.editorialHistory)) {
+    throw new TypeError('commercial validation editorialHistory must be an array');
+  }
   const commercialPolicy = resolveCommercialContentPolicy(options.policy ?? {});
   const baseOptions = options.basePolicy === undefined ? {} : { policy: options.basePolicy };
   const baseQuality = validateContentArtifact(artifact, baseOptions);
@@ -388,18 +552,30 @@ export function validateCommercialContentArtifact(artifact, options = {}) {
     issues: clone(baseQuality.fields[field].issues),
   }]));
   const sourceFacts = artifact.sourceFacts ?? {};
+  const editorialIssues = [];
 
   for (const language of CONTENT_LANGUAGES) {
     const title = artifact.content.title?.[language];
-    if (typeof title === 'string' && title.trim()) fields.title.issues.push(...titleIssues(title, sourceFacts, commercialPolicy.title, language));
+    if (typeof title === 'string' && title.trim()) {
+      fields.title.issues.push(...titleIssues(title, sourceFacts, commercialPolicy.title, language));
+      const issues = titleEditorialIssues(title, sourceFacts, commercialPolicy.editorial, language);
+      fields.title.issues.push(...issues);
+      editorialIssues.push(...issues);
+    }
     const description = artifact.content.description?.[language];
     if (typeof description === 'string' && description.trim()) {
       fields.description.issues.push(...descriptionIssues(description, commercialPolicy.description));
       fields.description.issues.push(...forbiddenModelIssues(description, sourceFacts, 'description', language));
+      const issues = descriptionEditorialIssues(description, sourceFacts, commercialPolicy.editorial, language);
+      fields.description.issues.push(...issues);
+      editorialIssues.push(...issues);
     }
     const keywords = artifact.content.keywords?.[language];
     fields.keywords.issues.push(...keywordIssues(keywords, language, sourceFacts, commercialPolicy.keywords));
   }
+  const repeatedOpenings = repeatedOpeningIssues(artifact, options.editorialHistory ?? []);
+  fields.description.issues.push(...repeatedOpenings);
+  editorialIssues.push(...repeatedOpenings);
   for (const field of CONTENT_FIELDS) fields[field].status = fieldStatus(fields[field].issues);
 
   const reworkPlan = reworkPlanFor(fields);
@@ -410,6 +586,17 @@ export function validateCommercialContentArtifact(artifact, options = {}) {
     productKey: artifact.productKey,
     contentVersion: artifact.version,
     profile: COMMERCIAL_CONTENT_PROFILE,
+    editorialGate: {
+      profile: COMMERCIAL_EDITORIAL_GATE,
+      status: fieldStatus(editorialIssues),
+      issues: clone(editorialIssues),
+      criteria: {
+        languageSeparation: commercialPolicy.editorial.requireLanguageSeparation,
+        productSpecificCopy: commercialPolicy.editorial.rejectBoilerplate,
+        buyerBenefitOpening: commercialPolicy.editorial.requireBuyerBenefitOpening,
+        uniqueBatchOpening: true,
+      },
+    },
     status: reworkFieldCount ? CONTENT_STATUSES.REWORK : reviewFieldCount ? CONTENT_STATUSES.REVIEW : CONTENT_STATUSES.READY,
     baseQuality,
     fields,

@@ -2,8 +2,9 @@
 
 This document defines the commercial Prom.ua content profile layered on top of
 the existing Content Artifact v1 and Content Quality contracts. It improves
-sales usefulness without treating deterministic code as a measure of subjective
-copy quality.
+sales usefulness and adds a mandatory editorial gate. Deterministic code still
+cannot prove a guaranteed conversion, but content cannot be marked ready merely
+because it has enough characters and headings.
 
 ## Artifact and authority
 
@@ -46,9 +47,9 @@ values (including localized values and separator variants) trigger REWORK.
 Numeric characteristics must remain traceable to `sourceFacts`. Price, promotion, supplier metadata, unsupported
 claims, and obvious repeated-token stuffing are rejected.
 
-The validator does not pretend to understand perfect syntax, persuasion,
-semantic SEO, or every possible natural-language synonym. Prompt guidance and
-structured generation metadata remain important for those qualities.
+The validator does not claim to replace a literary editor or guarantee a sale.
+It does enforce objective readability conditions below; any rejected condition
+requires content rework before the product can continue to photos or Excel.
 
 ## Description standard
 
@@ -72,6 +73,30 @@ not rejected automatically.
 No `Комплектація`/`Комплектация` block is requested by the generation prompt,
 even when package facts exist. Characteristics retain exact verified values;
 units are not converted.
+
+## Editorial quality gate
+
+Every Russian and Ukrainian title and description is checked by
+`commercial-editorial-v1` after generation and after every rework. The gate
+requires:
+
+- independent language versions with correct grammar and natural word choice;
+- no recognizable words from the other language, literal translation, awkward
+  calques, warehouse noise such as `шт`, or incomplete purpose phrases;
+- a readable title that identifies the product without an empty slogan;
+- an opening description sentence that identifies the verified product type and
+  gives a concrete buyer benefit or use situation;
+- several complete sentences with product-specific wording;
+- no reusable boilerplate such as `практичный товар для`, `практичний товар
+  для`, or `опис товара помогает покупателю`;
+- a distinct commercial argument grounded in `sourceFacts`, with no inflated
+  promises or unsupported features.
+
+The result exposes `editorialGate` with its profile, status, criteria, and issue
+codes. Editorial issues are attached to the affected `title` or `description`
+field, so `reworkPlan` sends only the defective field back to the generator.
+`READY` means that the deterministic editorial checks passed; it does not claim
+that software can mathematically guarantee that every reader will buy.
 
 ## Keywords standard
 
@@ -106,10 +131,11 @@ validateCommercialContentArtifact(artifact, {
 })
 ```
 
-The validator first runs `validateContentArtifact`, then adds only deterministic
-commercial checks. It returns `READY`, `REVIEW`, or `REWORK`, keeps the base
-quality result, reports `{ field, code, severity, details }` issues, and emits
-a field-level `reworkPlan`. Status precedence remains:
+The validator first runs `validateContentArtifact`, then adds deterministic
+commercial and editorial checks. It returns `READY`, `REVIEW`, or `REWORK`, keeps
+the base quality result, reports `{ field, code, severity, details }` issues,
+exposes the `editorialGate`, and emits a field-level `reworkPlan`. Status
+precedence remains:
 
 ```text
 REWORK > REVIEW > READY
@@ -118,17 +144,21 @@ REWORK > REVIEW > READY
 Commercial checks never upgrade a base `REWORK` or `REVIEW` result. Hard,
 defensible failures include weak traceable title structure, unsupported
 traceable model/numeric facts, forbidden completeness headings, keyword count
-or length boundaries, duplicate phrases, language-marker mixing, and economic
-metadata. Subjective claims such as “persuasive” or “professional” are not
-pretended to be measurable; unsupported claims remain governed by the base
-claims authority.
+or length boundaries, duplicate phrases, language-marker mixing, economic
+metadata, mixed-language title/description text, boilerplate, weak openings,
+and warehouse unit noise. Subjective claims such as “persuasive” or
+“professional” are not pretended to be measurable; the prompt and gate turn
+that requirement into concrete buyer-benefit, language, clarity, and
+product-specific checks. Unsupported claims remain governed by the base claims
+authority.
 
 ## Generation and rework
 
-`generateContentArtifact` evaluates the commercial profile by default. The
-provider-neutral prompt now requires both language versions, the title order,
-buyer-benefit description structure, no completeness block, and 25–35 natural
-phrases targeted to 800–1000 characters. The compatibility profile
+`generateContentArtifact` evaluates the commercial profile and editorial gate by
+default. The provider-neutral prompt now requires both language versions,
+independent proofreading, the title order, a concrete buyer-benefit opening,
+product-specific wording, no completeness block, and 25–35 natural phrases
+targeted to 800–1000 characters. The compatibility profile
 `base-v1` is available for callers that explicitly need the pre-commercial
 quality behavior.
 

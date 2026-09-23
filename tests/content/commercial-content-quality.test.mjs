@@ -18,7 +18,7 @@ import {
 import { buildContentExcelRow } from '../../src/excel/content-row-adapter.mjs';
 import { buildPhotoProductionPlan } from '../../src/photos/photo-production-plan.mjs';
 
-function description(length = 1400, prefix = 'Опис товару допомагає покупцеві зрозуміти практичне використання') {
+function description(length = 1400, prefix = 'Фен VGR допомагає швидко висушити волосся та зручно підготувати його до щоденного укладання') {
   const sentences = Array.from({ length }, (_, index) => (
     `${prefix} та переваги виробу, абзац ${index + 1}.`
   )).join(' ');
@@ -56,7 +56,10 @@ function validArtifact(overrides = {}) {
         ua: 'Фен з холодним обдувом VGR 2200 Вт чорний',
         ru: 'Фен с холодным обдувом VGR 2200 Вт черный',
       },
-      description: { ua: description(1400), ru: description(1400, 'Описание товара помогает покупателю понять практическое использование') },
+      description: {
+        ua: description(1400, 'Фен VGR допомагає швидко висушити волосся та зручно підготувати його до щоденного укладання'),
+        ru: description(1400, 'Фен VGR помогает быстро высушить волосы и удобно подготовить их к ежедневной укладке'),
+      },
       keywords: { ua: keywords('ua'), ru: keywords('ru') },
       characteristics: [{ name: 'Потужність', value: '2200 Вт' }],
     },
@@ -102,6 +105,13 @@ test('commercial policy defaults expose the Prom v2 boundaries', () => {
     rejectLanguageMix: true,
   });
   assert.equal(resolveCommercialContentPolicy().keywords.maximumPhrases, 35);
+  assert.deepEqual(resolveCommercialContentPolicy().editorial, {
+    requireLanguageSeparation: true,
+    rejectBoilerplate: true,
+    requireBuyerBenefitOpening: true,
+    minimumDescriptionSentences: 3,
+    maximumTitleCharacters: 140,
+  });
 });
 
 test('invalid commercial policy is rejected deterministically', () => {
@@ -170,6 +180,43 @@ test('incomplete purpose phrase in title is reworked', () => {
   assert.equal(result.fields.title.issues.some((item) => item.code === 'TITLE_INCOMPLETE_PURPOSE'), true);
 });
 
+test('editorial gate rejects warehouse unit noise and generic title slogans', () => {
+  const value = validArtifact();
+  value.content.title.ua = 'Фен VGR для: точний вибір шт';
+  const result = validateCommercialContentArtifact(value);
+  assert.equal(result.fields.title.issues.some((item) => item.code === 'TITLE_EDITORIAL_UNIT_NOISE'), true);
+  assert.equal(result.fields.title.issues.some((item) => item.code === 'TITLE_EDITORIAL_PURPOSE_UNCLEAR'), true);
+  assert.equal(result.editorialGate.status, 'REWORK');
+});
+
+test('editorial gate rejects mixed language in a title and description', () => {
+  const value = validArtifact();
+  value.content.title.ru = 'Фен с холодным обдувом VGR 2200 Вт ідеальний';
+  value.content.description.ua = value.content.description.ua.replace('допомагає', 'помогает');
+  const result = validateCommercialContentArtifact(value);
+  assert.equal(result.fields.title.issues.some((item) => item.code === 'TITLE_EDITORIAL_LANGUAGE_MIX'), true);
+  assert.equal(result.fields.description.issues.some((item) => item.code === 'DESCRIPTION_EDITORIAL_LANGUAGE_MIX'), true);
+  assert.equal(result.status, 'REWORK');
+});
+
+test('editorial gate rejects generic boilerplate and weak openings', () => {
+  const value = validArtifact();
+  value.content.description.ua = description(1400, 'Практичний товар для дому має характеристики які можна перевірити');
+  value.content.description.ru = description(1400, 'Практичный товар для дома имеет характеристики которые можно проверить');
+  const result = validateCommercialContentArtifact(value);
+  assert.equal(result.fields.description.issues.some((item) => item.code === 'DESCRIPTION_EDITORIAL_BOILERPLATE'), true);
+  assert.equal(result.editorialGate.status, 'REWORK');
+});
+
+test('editorial gate rejects an exact opening reused by another product in the batch', () => {
+  const previous = validArtifact({ productKey: 'ugopt:commercial-previous' });
+  const current = validArtifact({ productKey: 'ugopt:commercial-current' });
+  const result = validateCommercialContentArtifact(current, { editorialHistory: [previous] });
+  assert.equal(result.fields.description.issues.some((item) => item.code === 'DESCRIPTION_EDITORIAL_REPEATED_OPENING'), true);
+  assert.equal(result.fields.description.status, 'REWORK');
+  assert.equal(result.editorialGate.criteria.uniqueBatchOpening, true);
+});
+
 test('unsupported model in title is reworked when traceable', () => {
   const value = validArtifact();
   value.content.title.ua = 'Фен VGR V-999 2200 Вт чорний';
@@ -235,7 +282,10 @@ test('verified color is allowed in the title', () => {
 
 test('description at the 1000 visible-character minimum is accepted structurally', () => {
   const value = validArtifact();
-  value.content.description = { ua: description(1020), ru: description(1020, 'Описание товара объясняет пользу') };
+  value.content.description = {
+    ua: description(1020),
+    ru: description(1020, 'Фен VGR помогает быстро высушить волосы и удобно подготовить их к ежедневной укладке'),
+  };
   const result = validateCommercialContentArtifact(value);
   assert.equal(result.fields.description.status, 'READY');
   assert.equal(result.fields.description.issues.length, 0);
@@ -243,7 +293,10 @@ test('description at the 1000 visible-character minimum is accepted structurally
 
 test('description outside the preferred range remains advisory', () => {
   const value = validArtifact();
-  value.content.description = { ua: description(1100), ru: description(1100, 'Описание товара объясняет пользу') };
+  value.content.description = {
+    ua: description(1100),
+    ru: description(1100, 'Фен VGR помогает быстро высушить волосы и удобно подготовить их к ежедневной укладке'),
+  };
   const result = validateCommercialContentArtifact(value);
   assert.equal(result.fields.description.status, 'READY');
   assert.equal(result.fields.description.issues.length, 0);

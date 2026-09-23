@@ -20,8 +20,11 @@ import {
   validatePhotoArtifacts,
 } from '../../src/photos/photo-quality.mjs';
 
-function longText(prefix) {
-  return Array.from({ length: 60 }, (_, index) => `${prefix} пояснює користь товару та спосіб використання номер ${index + 1}.`).join(' ');
+function longText(prefix, language = 'ua') {
+  const tail = language === 'ru'
+    ? 'помогает понять пользу товара и способ использования'
+    : 'пояснює користь товару та спосіб використання';
+  return Array.from({ length: 60 }, (_, index) => `${prefix} ${tail}, абзац ${index + 1}.`).join(' ');
 }
 
 function keywords(prefix) {
@@ -34,7 +37,10 @@ function contentArtifact(productKey = 'product-A') {
     version: 1,
     content: {
       title: { ru: 'Фен для волос', ua: 'Фен для волосся чорний' },
-      description: { ru: longText('Описание'), ua: longText('Опис') },
+      description: {
+        ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'),
+        ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua'),
+      },
       keywords: { ru: keywords('фен'), ua: keywords('фен') },
       characteristics: [{ name: 'Потужність', value: '2200 Вт' }],
     },

@@ -84,7 +84,7 @@ const JOB_KEYS = new Set([
 ]);
 const OPTION_KEYS = new Set(['mode', 'pricing', 'content', 'photos', 'characteristics']);
 const PRICING_OPTION_KEYS = new Set(['researcher', 'commission', 'commissionResolver', 'policy', 'enforceCompetitiveCeiling']);
-const CONTENT_OPTION_KEYS = new Set(['generator', 'policy', 'commercialPolicy']);
+const CONTENT_OPTION_KEYS = new Set(['generator', 'policy', 'commercialPolicy', 'editorialHistory']);
 const PHOTO_OPTION_KEYS = new Set(['provider', 'outputRoot', 'policy', 'usedCreativeBriefs']);
 const CHARACTERISTIC_OPTION_KEYS = new Set(['mapping', 'policy']);
 const OPERATOR_ARTIFACT_KEYS = new Set(['marketEvidence', 'pricingDecision', 'contentArtifact', 'photoArtifact', 'approvedMedia']);
@@ -595,6 +595,7 @@ function contentQuality(artifact, options) {
   return validateCommercialContentArtifact(artifact, {
     ...(options.content.policy === undefined ? {} : { basePolicy: options.content.policy }),
     ...(options.content.commercialPolicy === undefined ? {} : { policy: options.content.commercialPolicy }),
+    ...(options.content.editorialHistory === undefined ? {} : { editorialHistory: options.content.editorialHistory }),
   });
 }
 
@@ -611,6 +612,7 @@ async function runContent(ctx, job, options, pricingDecision) {
   const contentOptions = {
     ...(options.content.policy === undefined ? {} : { policy: options.content.policy }),
     ...(options.content.commercialPolicy === undefined ? {} : { commercialPolicy: options.content.commercialPolicy }),
+    ...(options.content.editorialHistory === undefined ? {} : { editorialHistory: options.content.editorialHistory }),
     profile: COMMERCIAL_CONTENT_PROFILE,
   };
   if (suppliedArtifact !== undefined) {

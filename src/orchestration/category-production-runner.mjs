@@ -492,16 +492,25 @@ export async function runCategoryProduction(request, options = {}) {
     ...(normalizedOptions.production ?? {}),
     mode: PRODUCTION_MODES.CATEGORY_PRODUCTION,
     pricing: categoryPricingOptions(normalizedOptions),
-    content: normalizedOptions.content ?? {},
+    content: clone(normalizedOptions.content ?? {}),
     photos: { ...(normalizedOptions.photos ?? {}) },
     characteristics: normalizedOptions.characteristics ?? {},
   };
   const results = [];
   const usedCreativeBriefs = [...(productionOptions.photos.usedCreativeBriefs ?? [])];
+  const editorialHistory = [];
   for (const item of filtered.candidates) {
     productionOptions.photos.usedCreativeBriefs = usedCreativeBriefs;
+    productionOptions.content.editorialHistory = editorialHistory;
     const result = await advanceProductionProduct(jobFor(category, item.candidate, item.input, normalizedOptions), productionOptions);
     if (item.input.photoCreativeBrief && result.photoArtifact?.plan?.status === 'READY') usedCreativeBriefs.push(clone(item.input.photoCreativeBrief));
+    if (result.contentArtifact && ![
+      PRODUCTION_STATUSES.WAITING_FOR_CONTENT,
+      PRODUCTION_STATUSES.CONTENT_REVIEW,
+      PRODUCTION_STATUSES.CONTENT_REWORK,
+    ].includes(result.workflowStatus)) {
+      editorialHistory.push(clone(result.contentArtifact));
+    }
     results.push(result);
     await persistProduct(normalizedOptions.stateStore, normalizedOptions.runId, result);
   }

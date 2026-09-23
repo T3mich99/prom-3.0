@@ -16,7 +16,11 @@ function keywordsAtLength(length) {
 }
 
 function longText(prefix) {
-  return Array.from({ length: 45 }, (_, index) => `${prefix} пояснює перевагу та спосіб використання номер ${index + 1}`).join(' ');
+  const language = arguments[1] ?? 'ua';
+  const tail = language === 'ru'
+    ? 'помогает понять пользу и способ использования'
+    : 'пояснює користь і спосіб використання';
+  return Array.from({ length: 45 }, (_, index) => `${prefix} ${tail}, абзац ${index + 1}.`).join(' ');
 }
 
 const sourceInput = () => ({
@@ -29,7 +33,10 @@ const sourceInput = () => ({
 function validContent(overrides = {}) {
   return {
     title: { ru: 'Фен для волос', ua: 'Фен для волосся' },
-    description: { ru: longText('Описание товара'), ua: longText('Опис товару') },
+    description: {
+      ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'),
+      ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua'),
+    },
     keywords: { ru: keywordsAtLength(800), ua: keywordsAtLength(800) },
     characteristics: [{ name: 'Мощность', value: '2200 Вт' }],
     ...overrides,
@@ -224,7 +231,7 @@ test('rework rejects quality from a previous artifact version before generator i
     () => reworkContentArtifact({ artifact: nextArtifact, quality: initial.quality, sourceFacts: nextArtifact.sourceFacts }, {
       generator: async () => {
         calls += 1;
-        return { content: { description: { ru: longText('Новое описание'), ua: longText('Новий опис') } } };
+        return { content: { description: { ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'), ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua') } } };
       },
     }),
     (error) => error instanceof ContentGenerationError && error.code === 'QUALITY_RESULT_MISMATCH',
@@ -241,7 +248,7 @@ test('rework rejects an artifact changed without updating its quality result', a
     () => reworkContentArtifact({ artifact: changedArtifact, quality: initial.quality, sourceFacts: changedArtifact.sourceFacts }, {
       generator: async () => {
         calls += 1;
-        return { content: { description: { ru: longText('Новое описание'), ua: longText('Новий опис') } } };
+        return { content: { description: { ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'), ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua') } } };
       },
     }),
     (error) => error instanceof ContentGenerationError && error.code === 'QUALITY_RESULT_MISMATCH',
@@ -258,7 +265,7 @@ test('rework rejects quality computed under a different policy before generator 
       policy,
       generator: async () => {
         calls += 1;
-        return { content: { description: { ru: longText('Новое описание'), ua: longText('Новий опис') } } };
+        return { content: { description: { ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'), ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua') } } };
       },
     }),
     (error) => error instanceof ContentGenerationError && error.code === 'QUALITY_RESULT_MISMATCH',
@@ -274,7 +281,7 @@ test('description-only rework fixes description and leaves other fields unchange
     artifact: initial.artifact,
     quality: initial.quality,
     sourceFacts: initial.artifact.sourceFacts,
-  }, { generator: fakeGenerator({ content: { description: { ru: longText('Исправленное описание'), ua: longText('Виправлений опис') } } }) });
+  }, { generator: fakeGenerator({ content: { description: { ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'), ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua') } } }) });
   assert.equal(result.status, CONTENT_STATUSES.READY);
   assert.equal(result.artifact.version, before.version + 1);
   assert.deepEqual(result.artifact.content.title, before.content.title);
@@ -354,7 +361,7 @@ test('rework rejects unrequested fields and mismatched source facts', async () =
   await assert.rejects(
     () => reworkContentArtifact({ artifact: initial.artifact, quality: initial.quality, sourceFacts: initial.artifact.sourceFacts }, {
       generator: fakeGenerator({ content: {
-        description: { ru: longText('Новое описание'), ua: longText('Новий опис') },
+        description: { ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'), ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua') },
         title: { ru: 'Лишнее', ua: 'Зайве' },
       } }),
     }),
@@ -362,7 +369,7 @@ test('rework rejects unrequested fields and mismatched source facts', async () =
   );
   await assert.rejects(
     () => reworkContentArtifact({ artifact: initial.artifact, quality: initial.quality, sourceFacts: { power: '9999 Вт' } }, {
-      generator: fakeGenerator({ content: { description: { ru: longText('Новое описание'), ua: longText('Новий опис') } } }),
+      generator: fakeGenerator({ content: { description: { ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'), ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua') } } }),
     }),
     (error) => error instanceof ContentGenerationError && error.code === 'SOURCE_FACTS_MISMATCH',
   );
@@ -408,7 +415,7 @@ test('rework uses the current Content Quality result rather than duplicating qua
   assert.equal(quality.status, CONTENT_STATUSES.REWORK);
   const result = await reworkContentArtifact({ artifact, quality, sourceFacts: artifact.sourceFacts }, {
     profile: 'base-v1',
-    generator: fakeGenerator({ content: { description: { ru: longText('Исправлено'), ua: longText('Виправлено') } } }),
+    generator: fakeGenerator({ content: { description: { ru: longText('Фен помогает быстро высушить волосы и удобно подготовить их к укладке', 'ru'), ua: longText('Фен допомагає швидко висушити волосся та зручно підготувати його до укладання', 'ua') } } }),
   });
   assert.equal(result.status, CONTENT_STATUSES.READY);
 });

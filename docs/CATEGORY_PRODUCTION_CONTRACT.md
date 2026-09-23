@@ -68,8 +68,12 @@ mandatory market-research gate.
 
 ## Content, photos, and export
 
-Content is still validated by the existing commercial Content Contract. The
-category runner does not add claims or completeness/package sections.
+Content is still validated by the existing commercial Content Contract and its
+mandatory `commercial-editorial-v1` gate. The category runner does not add
+claims or completeness/package sections. A product cannot reach the photo or
+Excel stages when its title or either language description contains mixed
+language, literal or boilerplate copy, a weak buyer-benefit opening, or
+warehouse unit noise. Length and headings alone do not make content ready.
 
 Photo work is delegated to the existing PR20/PR24 planner, prompt builder,
 byte validator, visual QA, and selective rework implementation. The runner
