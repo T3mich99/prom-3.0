@@ -17,7 +17,8 @@ import { mapTemplateSchema } from '../../src/excel/schema-mapper.mjs';
 import { createWorkbook, cleanupTempDir, fileHash, loadWorkbook, makeTempDir } from './support.mjs';
 
 function description(length = 1400, prefix = 'Фен допомагає швидко висушити волосся та зручно підготувати його до щоденного укладання') {
-  return Array.from({ length }, (_, index) => `${prefix}, абзац ${index + 1}.`).join(' ').slice(0, length);
+  const fact = prefix.includes('помогает') ? 'мощность 2200 Вт, цвет черный' : 'потужність 2200 Вт, колір чорний';
+  return Array.from({ length }, (_, index) => `${prefix}, ${fact}, абзац ${index + 1}.`).join(' ').slice(0, length);
 }
 
 function keywords(language) {

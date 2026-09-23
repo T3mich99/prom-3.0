@@ -19,7 +19,8 @@ function longText(prefix, language = 'ua') {
   const tail = language === 'ru'
     ? 'помогает понять пользу и способ использования'
     : 'пояснює перевагу та спосіб використання';
-  return Array.from({ length: 45 }, (_, index) => `${prefix} ${tail}, абзац ${index + 1}.`).join(' ');
+  const fact = language === 'ru' ? 'мощность 2200 Вт, цвет черный' : 'потужність 2200 Вт, колір чорний';
+  return Array.from({ length: 45 }, (_, index) => `${prefix}, ${fact} ${tail}, абзац ${index + 1}.`).join(' ');
 }
 
 function artifact(overrides = {}) {

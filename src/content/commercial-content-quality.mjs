@@ -81,8 +81,13 @@ const EDITORIAL_BOILERPLATE_PATTERNS = [
   /виріб\s+доречно\s+розглядати|изделие\s+удобно\s+рассматривать/iu,
   /характеристик(?:и|и)\s+(?:які\s+можна\s+перевірити|которые\s+можно\s+проверить)/iu,
   /допомагає\s+швидко\s+порівняти|помогает\s+быстро\s+сравнить/iu,
+  /товар\s+допомагає\s+організувати\s+(?:догляд|тренування)|товар\s+помогает\s+организовать\s+(?:уход|тренировку)/iu,
+  /назва\s+(?:одразу\s+)?показує\s+основне\s+призначення|название\s+(?:сразу\s+)?показывает\s+основное\s+назначение/iu,
+  /перевірювані\s+параметри\s+зібрані|проверяемые\s+параметры\s+собраны/iu,
+  /картка\s+допомагає\s+зробити\s+вибір|карточка\s+помогает\s+сделать\s+выбор/iu,
 ];
 const GENERIC_TITLE_SLOGAN_PATTERN = /(?:для\s*:\s*|(?<![\p{L}])для\s+(?:точний|точный|ідеальний|идеальный|найкращий|лучший)\s+вибір(?![\p{L}]))/iu;
+const GENERIC_PRODUCT_TITLE_PATTERN = /^(?:масажер|массажер|масажна\s+подушка|массажная\s+подушка|пензлик|кисть|засіб|средство|товар|виріб|изделие)(?:\s+(?:для|дл\s+|тіла|тела))?$/iu;
 const TITLE_UNIT_SUFFIX_PATTERN = /(?:^|\s)шт\.?$/iu;
 
 function isRecord(value) {
@@ -158,6 +163,15 @@ function containsFactValue(text, value) {
   return false;
 }
 
+function containsFactCue(text, value) {
+  if (containsFactValue(text, value)) return true;
+  const textWords = normalizedWords(text);
+  const factWords = normalizedWords(value).filter((word) => word.length >= 3 && !/^\d[\p{L}\d-]*$/u.test(word));
+  if (factWords.length === 0) return false;
+  const cues = factWords.map((word) => word.slice(0, Math.min(5, word.length)));
+  return cues.some((cue) => textWords.some((word) => word.startsWith(cue) || cue.startsWith(word.slice(0, Math.min(5, word.length)))));
+}
+
 function firstWordMatchesFact(text, value) {
   const textWord = normalizedWords(text)[0];
   const factWords = normalizedWords(value);
@@ -175,6 +189,11 @@ function readableEditorialType(sourceFacts, language) {
   const normalized = normalizeText(type);
   const words = normalizedWords(normalized);
   if (words.length === 0 || words.length > 7 || /\d/gu.test(normalized) || /(?:^|\s)шт\.?(?:\s|$)/iu.test(normalized)) return undefined;
+  // Some supplier feeds copy the Ukrainian type into the RU slot. It cannot
+  // be used as a Russian opening cue; the localized public title remains the
+  // authority for readability in that language.
+  if (language === 'ru' && (/[іїєґ]/iu.test(normalized) || /(?:електричний|вакуумний|банковий|апарат|масажер|обличчя|голови|шиї|коліна|спини)/iu.test(normalized))) return undefined;
+  if (language === 'ua' && /[ыэъё]/iu.test(normalized)) return undefined;
   const otherLanguage = editorialLanguageMarker(normalized, language);
   if (otherLanguage !== null && otherLanguage !== language) return undefined;
   return normalized;
@@ -354,6 +373,9 @@ function titleEditorialIssues(title, sourceFacts, policy, language) {
   if (GENERIC_TITLE_SLOGAN_PATTERN.test(normalized)) {
     issues.push(issue('TITLE_EDITORIAL_PURPOSE_UNCLEAR', 'rework', 'title', 'title uses a generic slogan or incomplete purpose phrase instead of naming the use'));
   }
+  if (GENERIC_PRODUCT_TITLE_PATTERN.test(normalized)) {
+    issues.push(issue('TITLE_EDITORIAL_TOO_GENERIC', 'rework', 'title', 'title names only a generic product class; add the verified use, zone, feature, or other buyer-relevant cue', { language }));
+  }
   // A source type is used here only as a readability signal: the commercial
   // title rules above remain the authority for factual type matching.
   const type = readableEditorialType(sourceFacts, language);
@@ -363,10 +385,36 @@ function titleEditorialIssues(title, sourceFacts, policy, language) {
   return issues;
 }
 
-function descriptionEditorialIssues(description, sourceFacts, policy, language) {
+function descriptionProductArgumentIssues(description, characteristics, language, title) {
+  if (!Array.isArray(characteristics) || characteristics.length < 2 || typeof description !== 'string') return [];
+  const markers = [...description.matchAll(/(?:^|\n)характеристики\s*:/igu)];
+  const specificationStart = markers.length ? markers[markers.length - 1].index : description.length;
+  const commercialText = normalizeText(description.slice(0, specificationStart));
+  const characteristicValues = characteristics
+    .map((row) => row?.value)
+    .filter((value) => typeof value === 'string' && (normalizeText(value).length >= 3 || /\d|[A-Za-z]/u.test(normalizeText(value))))
+    .filter((value) => !/^(?:так|ні|да|нет|yes|no)$/iu.test(normalizeText(value)));
+  const values = language === 'ru' && typeof title === 'string' ? [title, ...characteristicValues] : characteristicValues;
+  const matched = values.filter((value) => containsFactCue(commercialText, value));
+  // The characteristic array is shared by both language fields and often
+  // remains in Ukrainian. Russian copy may therefore use a translated value
+  // whose morphology cannot be proven by exact matching; one concrete cue is
+  // still required there, while Ukrainian copy must expose two when available.
+  const minimum = Math.min(language === 'ru' ? 1 : 2, values.length);
+  return matched.length >= minimum ? [] : [issue(
+    'DESCRIPTION_EDITORIAL_PRODUCT_ARGUMENT_WEAK',
+    'rework',
+    'description',
+    'commercial paragraphs must use concrete verified product facts before the specification list',
+    { language, matchedFacts: matched.length, minimumFacts: minimum },
+  )];
+}
+
+function descriptionEditorialIssues(description, sourceFacts, policy, language, characteristics, title) {
   const issues = [
     ...editorialLanguageIssues(description, 'description', language, policy),
     ...editorialBoilerplateIssues(description, 'description', policy),
+    ...descriptionProductArgumentIssues(description, characteristics, language, title),
   ];
   if (typeof description !== 'string') return issues;
   const visible = normalizeText(description);
@@ -385,8 +433,8 @@ function descriptionEditorialIssues(description, sourceFacts, policy, language) 
   if (policy.requireBuyerBenefitOpening) {
     const openingText = opening.slice(0, 420);
     const benefitPattern = language === 'ua'
-      ? /(?:допомага|зручно|підтрим|полегш|захищ|очищ|суш|уклад|догляд|тренув|розслаб|зберіг|підходить|дозволяє|дає\s+змогу|поможе)/iu
-      : /(?:помога|удоб|поддерж|облегч|защищ|очищ|суш|уклад|уход|тренир|расслаб|хран|подходит|позвол|поможет)/iu;
+      ? /(?:допомага|зручно|підтрим|полегш|захищ|очищ|суш|уклад|догляд|тренув|розслаб|зберіг|підходить|дозволяє|дає\s+змогу|поможе|приділ|зосеред|викон|організ|створ|використ|вибір|зроб)/iu
+      : /(?:помога|удоб|поддерж|облегч|защищ|очищ|суш|уклад|уход|тренир|расслаб|хран|подходит|позвол|поможет|удел|сосред|выполн|организ|созда|использ|выбор|сдел)/iu;
     if (!benefitPattern.test(openingText)) {
       issues.push(issue('DESCRIPTION_EDITORIAL_OPENING_WEAK', 'rework', 'description', 'opening lacks a concrete buyer benefit or use scenario', { language }));
     }
@@ -437,7 +485,7 @@ function titleIssues(title, sourceFacts, policy, language) {
   }
 
   if (type !== undefined && !typeCueAppears(title, type)) {
-    issues.push(issue('TITLE_COMMERCIAL_STRUCTURE_WEAK', 'rework', 'title', 'title does not begin with the verified product type', { expectedType: type }));
+    issues.push(issue('TITLE_COMMERCIAL_STRUCTURE_WEAK', 'rework', 'title', 'title does not begin with the verified product type', { expectedType: type, language }));
   }
   if (brand !== undefined && !containsFactValue(title, brand)) {
     issues.push(issue('TITLE_COMMERCIAL_STRUCTURE_WEAK', 'rework', 'title', 'verified brand is missing from the title', { brand }));
@@ -599,7 +647,7 @@ export function validateCommercialContentArtifact(artifact, options = {}) {
     if (typeof description === 'string' && description.trim()) {
       fields.description.issues.push(...descriptionIssues(description, commercialPolicy.description));
       fields.description.issues.push(...forbiddenModelIssues(description, sourceFacts, 'description', language));
-      const issues = descriptionEditorialIssues(description, sourceFacts, commercialPolicy.editorial, language);
+      const issues = descriptionEditorialIssues(description, sourceFacts, commercialPolicy.editorial, language, artifact.content.characteristics, title);
       fields.description.issues.push(...issues);
       editorialIssues.push(...issues);
     }
@@ -627,6 +675,9 @@ export function validateCommercialContentArtifact(artifact, options = {}) {
         languageSeparation: commercialPolicy.editorial.requireLanguageSeparation,
         productSpecificCopy: commercialPolicy.editorial.rejectBoilerplate,
         buyerBenefitOpening: commercialPolicy.editorial.requireBuyerBenefitOpening,
+        literaryReadability: true,
+        creativeProductArgument: true,
+        verifiedFactsInCommercialText: true,
         uniqueBatchOpening: true,
       },
     },

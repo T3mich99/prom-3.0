@@ -55,8 +55,11 @@ for public wording. Internal feed noise is never copied into a title or
 description merely to satisfy the checker.
 
 The validator does not claim to replace a literary editor or guarantee a sale.
-It does enforce objective readability conditions below; any rejected condition
-requires content rework before the product can continue to photos or Excel.
+The repository now treats literary and creative quality as a required production
+gate: it enforces objective signals of a human marketplace text, and any
+rejected condition requires content rework before the product can continue to
+photos or Excel. A text that merely has enough characters, headings, or
+keywords is not ready.
 
 ## Description standard
 
@@ -95,9 +98,37 @@ requires:
   gives a concrete buyer benefit or use situation;
 - several complete sentences with product-specific wording;
 - no reusable boilerplate such as `практичный товар для`, `практичний товар
-  для`, or `опис товара помогает покупателю`;
+  для`, `товар помогает организовать уход или тренировку`, `название сразу
+  показывает основное назначение`, or `опис товара помогает покупателю`;
+- no title that names only a generic class such as `массажер`, `масажна
+  подушка`, `кисть`, or `засіб` without a verified use, zone, feature, or
+  other buyer-relevant cue;
+- commercial paragraphs before `Характеристики` must contain verified product
+  facts. Ukrainian copy exposes two characteristic cues when the source has
+  them; Russian copy exposes at least one localized product cue because the
+  shared characteristic array may retain Ukrainian values;
+- each batch must use different opening arguments. Exact opening reuse is a
+  rework error, and semantic repetition is reviewed by the operator before
+  export;
 - a distinct commercial argument grounded in `sourceFacts`, with no inflated
   promises or unsupported features.
+
+The public copy follows this order for every product, adapted to its actual
+category and facts:
+
+1. a clear reason to buy and a concrete use situation;
+2. one or more natural paragraphs explaining the product's verified features;
+3. `Переваги`/`Преимущества` with buyer-facing benefits tied to those facts;
+4. `Кому підійде`/`Кому подойдет` with realistic use scenarios;
+5. `Характеристики` with the complete source values;
+6. a short practical closing that helps the buyer make the final choice.
+
+Descriptions must not begin with a dry definition such as “товар призначений
+для”. A category-specific argument is required: support products explain
+support and fit, fitness products explain the training scenario, beauty tools
+explain the procedure, massage products explain the zone and format, and home
+goods explain the household task. Model identifiers stay out of public copy;
+verified brands may remain in the title.
 
 The result exposes `editorialGate` with its profile, status, criteria, and issue
 codes. Editorial issues are attached to the affected `title` or `description`
@@ -149,15 +180,16 @@ REWORK > REVIEW > READY
 ```
 
 Commercial checks never upgrade a base `REWORK` or `REVIEW` result. Hard,
-defensible failures include weak traceable title structure, unsupported
-traceable model/numeric facts, forbidden completeness headings, keyword count
-or length boundaries, duplicate phrases, language-marker mixing, economic
-metadata, mixed-language title/description text, boilerplate, weak openings,
-and warehouse unit noise. Subjective claims such as “persuasive” or
+defensible failures include weak traceable title structure, generic class-only
+titles, unsupported traceable model/numeric facts, forbidden completeness
+headings, keyword count or length boundaries, duplicate phrases,
+language-marker mixing, economic metadata, mixed-language title/description
+text, boilerplate, weak openings, missing verified facts in the commercial
+argument, and warehouse unit noise. Subjective claims such as “persuasive” or
 “professional” are not pretended to be measurable; the prompt and gate turn
-that requirement into concrete buyer-benefit, language, clarity, and
-product-specific checks. Unsupported claims remain governed by the base claims
-authority.
+that requirement into concrete buyer-benefit, language, clarity, fact-grounded
+and distinct-argument checks. Unsupported claims remain governed by the base
+claims authority.
 
 ## Generation and rework
 

@@ -224,6 +224,35 @@ test('editorial gate rejects generic boilerplate and weak openings', () => {
   assert.equal(result.editorialGate.status, 'REWORK');
 });
 
+test('editorial gate rejects a generic class-only title', () => {
+  const value = validArtifact({
+    sourceFacts: { ...sourceFacts(), type: { ua: 'Масажер', ru: 'Массажер' } },
+  });
+  value.content.title = { ua: 'Масажер', ru: 'Массажер' };
+  const result = validateCommercialContentArtifact(value);
+  assert.equal(result.fields.title.issues.some((item) => item.code === 'TITLE_EDITORIAL_TOO_GENERIC'), true);
+  assert.equal(result.editorialGate.status, 'REWORK');
+});
+
+test('editorial gate requires verified product facts in commercial paragraphs', () => {
+  const value = validArtifact({
+    content: {
+      ...validArtifact().content,
+      characteristics: [
+        { name: 'Потужність', value: '2200 Вт' },
+        { name: 'Кількість режимів', value: '3' },
+      ],
+      description: {
+        ua: description(1400, 'Фен VGR допомагає швидко висушити волосся та зручно підготувати його до щоденного укладання'),
+        ru: description(1400, 'Фен VGR помогает быстро высушить волосы и удобно подготовить их к ежедневной укладке'),
+      },
+    },
+  });
+  const result = validateCommercialContentArtifact(value);
+  assert.equal(result.fields.description.issues.some((item) => item.code === 'DESCRIPTION_EDITORIAL_PRODUCT_ARGUMENT_WEAK'), true);
+  assert.equal(result.editorialGate.status, 'REWORK');
+});
+
 test('editorial gate rejects an exact opening reused by another product in the batch', () => {
   const previous = validArtifact({ productKey: 'ugopt:commercial-previous' });
   const current = validArtifact({ productKey: 'ugopt:commercial-current' });
