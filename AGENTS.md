@@ -144,5 +144,10 @@
 - Після завантаження виконай category:media з publication та approvedMedia:
   команда перевіряє прямі URL без авторизації, тип зображення й відповідність SHA
   локальним файлам. Drive file ID не підмінює approvedAssetRef локального фото.
+- Для Excel прийнятна лише мережево підтверджена форма
+  `https://lh3.googleusercontent.com/d/<fileId>=w1280` із verification від
+  `category:media` (`PUBLIC_IMAGE_SHA256_VERIFIED`). `drive.google.com/uc?export=view`,
+  `/file/.../view`, авторизоване читання через Drive або `LOCAL_ONLY` не є
+  публічною медіа-публікацією; такий товар блокується до експорту.
 - Не змінюй права батьківських папок і не перезаписуй старі зображення через збіг імен.
   Upload успішний не означає, що адреса придатна для імпорту Prom.

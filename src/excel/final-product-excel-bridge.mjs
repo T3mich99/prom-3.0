@@ -33,8 +33,9 @@ const PRODUCTION_ARTIFACT_KEYS = new Set([
   'productKey', 'workflowStatus', 'selectedProduct', 'pricingDecision', 'contentArtifact',
   'characteristicPlan', 'approvedMedia', 'resolvedMetadata', 'provenance', 'diagnostics',
 ]);
-const PUBLISHABLE_MEDIA_KEYS = new Set(['productKey', 'version', 'items']);
-const PUBLISHABLE_ITEM_KEYS = new Set(['index', 'role', 'approvedAssetRef', 'sha256', 'publicUrl']);
+const PUBLISHABLE_MEDIA_KEYS = new Set(['productKey', 'version', 'verification', 'items']);
+const PUBLISHABLE_VERIFICATION_KEYS = new Set(['status', 'verifier', 'urlPolicy']);
+const PUBLISHABLE_ITEM_KEYS = new Set(['index', 'role', 'fileId', 'approvedAssetRef', 'sha256', 'publicUrl']);
 const LOCAL_URL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '0.0.0.0']);
 const REQUIRED_EXPORT_FIELDS = Object.freeze(['titleRu', 'price', 'photoUrls']);
 
@@ -187,13 +188,20 @@ function approvedPhotoByIndex(approvedMedia, productKey) {
   return byIndex;
 }
 
-/** Validate public URL references that correspond to already-approved local media; this performs no network request. */
+/** Validate a category:media network-attested public URL artifact against approved local media; this bridge performs no new network request. */
 export function validatePublishableMedia({ productKey, approvedMedia, publishableMedia }) {
   const key = nonEmptyString(productKey, 'productKey');
   assertRecord(approvedMedia, 'approvedMedia');
   assertRecord(publishableMedia, 'publishableMedia');
   assertKnownKeys(publishableMedia, PUBLISHABLE_MEDIA_KEYS, 'publishableMedia');
   if (publishableMedia.productKey !== key) throw new FinalProductExcelBridgeError('publishableMedia.productKey does not match productKey.', 'PRODUCT_IDENTITY_MISMATCH');
+  assertRecord(publishableMedia.verification, 'publishableMedia.verification');
+  assertKnownKeys(publishableMedia.verification, PUBLISHABLE_VERIFICATION_KEYS, 'publishableMedia.verification');
+  if (publishableMedia.verification.status !== 'PUBLIC_IMAGE_SHA256_VERIFIED'
+    || publishableMedia.verification.verifier !== 'category:media'
+    || publishableMedia.verification.urlPolicy !== 'lh3-googleusercontent-v1') {
+    throw new FinalProductExcelBridgeError('Publishable Media must contain a category:media network verification for the direct Google image URL policy.', 'PUBLISHABLE_MEDIA_NETWORK_VERIFICATION_REQUIRED');
+  }
   if (!Array.isArray(publishableMedia.items) || publishableMedia.items.length !== PHOTO_ROLE_ORDER.length) {
     throw new FinalProductExcelBridgeError('Publishable Media must contain exactly five items.', 'PUBLISHABLE_MEDIA_COUNT_INVALID');
   }
@@ -209,6 +217,13 @@ export function validatePublishableMedia({ productKey, approvedMedia, publishabl
     seenIndexes.add(item.index);
     if (item.role !== PHOTO_ROLE_ORDER[item.index - 1]) {
       throw new FinalProductExcelBridgeError('Publishable Media role does not match the canonical photo order.', 'PUBLISHABLE_MEDIA_ROLE_INVALID');
+    }
+    if (typeof item.fileId !== 'string' || !/^[A-Za-z0-9_-]+$/u.test(item.fileId)) {
+      throw new FinalProductExcelBridgeError('Publishable Media fileId must be a URL-safe Google Drive file ID.', 'PUBLISHABLE_MEDIA_FILE_ID_INVALID');
+    }
+    const expectedUrl = `https://lh3.googleusercontent.com/d/${item.fileId}=w1280`;
+    if (item.publicUrl !== expectedUrl) {
+      throw new FinalProductExcelBridgeError('Publishable Media publicUrl must use the verified direct lh3 Google image URL form.', 'PUBLISHABLE_MEDIA_URL_POLICY_INVALID');
     }
     const approved = approvedByIndex.get(item.index);
     if (!approved || item.approvedAssetRef !== approved.assetRef) {

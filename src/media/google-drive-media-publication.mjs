@@ -14,6 +14,8 @@ export const DRIVE_MEDIA_PUBLICATION_STATUSES = Object.freeze({
   NEEDS_OPERATOR: 'NEEDS_OPERATOR',
 });
 
+export const DIRECT_GOOGLE_IMAGE_URL_POLICY = 'lh3-googleusercontent-v1';
+
 const ROLE_FILE_SUFFIX = Object.freeze({
   hero: '01_main.png',
   usage: '02_usage.png',
@@ -124,6 +126,12 @@ function publicHttpsUrl(value) {
   }
 }
 
+function directGoogleImageUrl(fileId) {
+  const id = text(fileId);
+  if (!/^[A-Za-z0-9_-]+$/u.test(id)) throw new TypeError('published Drive file IDs must contain only URL-safe Drive ID characters');
+  return `https://lh3.googleusercontent.com/d/${id}=w1280`;
+}
+
 function expectedItems(sourceCode) {
   return PHOTO_ROLE_ORDER.map((role, index) => ({ index: index + 1, role, filename: sourceFilename(sourceCode, index + 1, role) }));
 }
@@ -153,13 +161,14 @@ export async function validateDriveMediaPublicationArtifact(artifact, options = 
     if (!nonEmpty(item.fileId) || seenIds.has(item.fileId)) throw new TypeError('published Drive file IDs must be unique and non-empty');
     if (!/^[a-f0-9]{64}$/u.test(text(item.sha256))) throw new TypeError('published item sha256 must be a lowercase hexadecimal SHA-256');
     if (!publicHttpsUrl(item.publicUrl) || seenUrls.has(item.publicUrl)) throw new TypeError('published publicUrl values must be unique absolute HTTPS URLs');
+    const directUrl = directGoogleImageUrl(item.fileId);
     if (typeof options.probe !== 'function') throw new TypeError('a public image probe is required to verify Drive URLs');
-    const probe = await options.probe(item.publicUrl, clone(item));
-    if (!isRecord(probe) || probe.ok !== true || !String(probe.contentType ?? '').toLocaleLowerCase('en-US').startsWith('image/')) throw new TypeError(`publicUrl was not verified as a public image: ${item.publicUrl}`);
-    if (probe.sha256 !== undefined && probe.sha256 !== item.sha256) throw new TypeError(`publicUrl bytes do not match the published SHA-256: ${item.publicUrl}`);
+    const probe = await options.probe(directUrl, clone({ ...item, publicUrl: directUrl }));
+    if (!isRecord(probe) || probe.ok !== true || !String(probe.contentType ?? '').toLocaleLowerCase('en-US').startsWith('image/')) throw new TypeError(`direct publicUrl was not verified as a public image: ${directUrl}`);
+    if (probe.sha256 !== undefined && probe.sha256 !== item.sha256) throw new TypeError(`direct publicUrl bytes do not match the published SHA-256: ${directUrl}`);
     seenIds.add(item.fileId);
-    seenUrls.add(item.publicUrl);
-    items.push({ index: item.index, role: item.role, filename: item.filename, fileId: item.fileId, sha256: item.sha256, publicUrl: item.publicUrl });
+    seenUrls.add(directUrl);
+    items.push({ index: item.index, role: item.role, filename: item.filename, fileId: item.fileId, sha256: item.sha256, publicUrl: directUrl });
   }
   return { status: DRIVE_MEDIA_PUBLICATION_STATUSES.READY, productKey: artifact.productKey, sourceCode: artifact.sourceCode, folderId: artifact.folderId, access: clone(artifact.access), items };
 }
@@ -174,11 +183,16 @@ export async function toPublishableMediaArtifact(artifact, options = {}) {
     const local = approved.photos.find((photo) => photo.index === item.index);
     if (!local || typeof local.assetRef !== 'string' || !path.isAbsolute(local.assetRef)) throw new TypeError('Approved media requires the absolute local image path');
     if (await fileSha256(local.assetRef) !== item.sha256) throw new TypeError('Published bytes do not match the approved local photo');
-    items.push({ index: item.index, role: item.role, approvedAssetRef: local.assetRef, sha256: item.sha256, publicUrl: item.publicUrl });
+    items.push({ index: item.index, role: item.role, fileId: item.fileId, approvedAssetRef: local.assetRef, sha256: item.sha256, publicUrl: item.publicUrl });
   }
   return {
     productKey: verified.productKey,
     version: 1,
+    verification: {
+      status: 'PUBLIC_IMAGE_SHA256_VERIFIED',
+      verifier: 'category:media',
+      urlPolicy: DIRECT_GOOGLE_IMAGE_URL_POLICY,
+    },
     items,
   };
 }

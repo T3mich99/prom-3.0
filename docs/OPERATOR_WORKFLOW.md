@@ -59,7 +59,11 @@ AI-сервіс. Для продовження збережи фактичні �
   перевіряє структуру HTTPS URL; він не доводить їхню мережеву доступність.
   Артефакт публікації має містити `access: { permissionType: "anyone", role:
   "reader", allowFileDiscovery: false }`. Доступ `writer` заборонений.
-- Передай publishableMedia, що відповідає саме approvedMedia цього товару.
+- Передай publishableMedia, що відповідає саме approvedMedia цього товару. Артефакт
+  повинен містити мережеву атестацію `PUBLIC_IMAGE_SHA256_VERIFIED` від
+  `category:media`, а всі п'ять URL мають форму
+  `https://lh3.googleusercontent.com/d/<fileId>=w1280`. Старі `uc?export=view`
+  посилання не передавай у Excel.
 
 Старий план без styleProfile треба перебудувати. Зміна style profile або байтів
 еталону змінює fingerprint і блокує повторне використання старого плану як актуального.

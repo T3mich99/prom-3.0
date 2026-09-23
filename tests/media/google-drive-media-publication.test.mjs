@@ -76,6 +76,10 @@ test('accepts only a complete verified Drive publication artifact and preserves 
   const verified = await validateDriveMediaPublicationArtifact(artifact, {
     probe,
   });
+  const legacyUrlArtifact = structuredClone(artifact);
+  legacyUrlArtifact.items[0].publicUrl = 'https://drive.google.com/uc?export=view&id=drive-file-1';
+  const normalizedLegacy = await validateDriveMediaPublicationArtifact(legacyUrlArtifact, { probe });
+  assert.equal(normalizedLegacy.items[0].publicUrl, 'https://lh3.googleusercontent.com/d/drive-file-1=w1280');
   const approvedMedia = { productKey: artifact.productKey, version: 1, photos: [] };
   for (const item of items) {
     const assetRef = path.join(root, item.filename);
@@ -84,6 +88,13 @@ test('accepts only a complete verified Drive publication artifact and preserves 
   }
   const publishable = await toPublishableMediaArtifact(artifact, { probe, approvedMedia });
   assert.equal(validatePublishableMedia({ productKey: artifact.productKey, approvedMedia, publishableMedia: publishable }).items.length, 5);
+  assert.deepEqual(publishable.verification, {
+    status: 'PUBLIC_IMAGE_SHA256_VERIFIED',
+    verifier: 'category:media',
+    urlPolicy: 'lh3-googleusercontent-v1',
+  });
+  assert.equal(publishable.items[0].fileId, 'drive-file-1');
+  assert.equal(publishable.items[0].publicUrl, 'https://lh3.googleusercontent.com/d/drive-file-1=w1280');
   await assert.rejects(() => toPublishableMediaArtifact(artifact, { probe }), /approved local media/);
   await fs.writeFile(approvedMedia.photos[0].assetRef, Buffer.from('different-image'));
   await assert.rejects(() => toPublishableMediaArtifact(artifact, { probe, approvedMedia }), /do not match/);

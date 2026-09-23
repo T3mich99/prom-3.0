@@ -90,8 +90,10 @@ MEDIA_PUBLICATION / DRIVE_MEDIA_PUBLICATION виконується через п
 Папки збережені в config/google-drive-media.json: Prom 2.0 → PRODUCT IMAGES.
 Читання папок та запис еталону перевірені 2026-09-17. Успішний upload ще не є
 перевіркою прямого URL для Prom. Для Prom
-потрібні прямі публічно доступні адреси самих фото. sandbox-посилання, локальний
-шлях, сторінка перегляду Drive або тимчасова адреса генератора не є готовою заміною.
+потрібні прямі публічно доступні адреси самих фото. Канонічна форма для Drive —
+`https://lh3.googleusercontent.com/d/<fileId>=w1280`; `drive.google.com/uc?export=view`,
+sandbox-посилання, локальний шлях, сторінка перегляду Drive або тимчасова адреса
+генератора не є готовою заміною.
 Використай чинний google-drive-media-publication bridge і перевірку URL з task.
 Після завантаження запиши publication з productKey, sourceCode, folderId та
 п'ятьма items: index, role, filename, fileId, sha256, publicUrl. Ролі/імена/хеші
@@ -102,8 +104,9 @@ approvedMedia з поточної Photo QA. Вхід JSON: `{publication, approv
 npm run category:media -- --input requests/publication.json --output outputs/publishable-media.json
 ```
 
-Команда перевіряє завантаження за прямими Google HTTPS URL без cookies/авторизації,
-MIME image/* та збіг SHA із локальними схваленими файлами. Сторінка входу, HTML
+Команда нормалізує URL до прямої `lh3.googleusercontent.com` форми та перевіряє
+завантаження без cookies/авторизації, MIME image/* та збіг SHA із локальними
+схваленими файлами. Сторінка входу, HTML
 viewer, змінені байти чи інша папка блокують приймання. Вихід запиши у
 productInputs[productKey].publishableMedia і повтори category. Сам CLI не завантажує
 файли в Drive: це робить підключений інструмент Codex. Не запускай платний API.

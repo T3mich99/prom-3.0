@@ -78,11 +78,17 @@ function publishableMedia(productKey, media = approvedMedia(productKey)) {
   return {
     productKey,
     version: 1,
+    verification: {
+      status: 'PUBLIC_IMAGE_SHA256_VERIFIED',
+      verifier: 'category:media',
+      urlPolicy: 'lh3-googleusercontent-v1',
+    },
     items: media.photos.map((photo, index) => ({
       index: index + 1,
       role: ['hero', 'usage', 'benefits', 'feature', 'final'][index],
+      fileId: `drive-file-${index + 1}`,
       approvedAssetRef: photo.assetRef,
-      publicUrl: `https://cdn.example.test/${encodeURIComponent(productKey)}/${index + 1}.png`,
+      publicUrl: `https://lh3.googleusercontent.com/d/drive-file-${index + 1}=w1280`,
     })),
   };
 }
@@ -156,7 +162,7 @@ test('builds a canonical final row from PR22 selling price and publishable media
   assert.equal(result.status, FINAL_EXCEL_STATUSES.READY_FOR_EXCEL);
   assert.equal(result.row.price, 449);
   assert.notEqual(result.row.price, 230);
-  assert.equal(result.row.photoUrls, 'https://cdn.example.test/ugopt%3Abridge-1/1.png, https://cdn.example.test/ugopt%3Abridge-1/2.png, https://cdn.example.test/ugopt%3Abridge-1/3.png, https://cdn.example.test/ugopt%3Abridge-1/4.png, https://cdn.example.test/ugopt%3Abridge-1/5.png');
+  assert.equal(result.row.photoUrls, 'https://lh3.googleusercontent.com/d/drive-file-1=w1280, https://lh3.googleusercontent.com/d/drive-file-2=w1280, https://lh3.googleusercontent.com/d/drive-file-3=w1280, https://lh3.googleusercontent.com/d/drive-file-4=w1280, https://lh3.googleusercontent.com/d/drive-file-5=w1280');
   assert.equal(result.row.photoUrls.includes('C:\\photos'), false);
   assert.deepEqual(Object.keys(result.row), CANONICAL_FIELDS.filter((field) => Object.hasOwn(result.row, field)));
   assert.equal(result.row.uniqueId, '0007');
@@ -197,6 +203,23 @@ test('publishable media contract rejects local, duplicate, malformed, and mismat
     mutate(value);
     assert.throws(() => validatePublishableMedia({ productKey: artifact.productKey, approvedMedia: artifact.approvedMedia, publishableMedia: value }));
   }
+});
+
+test('publishable media rejects an unverified or legacy Drive URL artifact', () => {
+  const artifact = productionArtifact();
+  const valid = publishableMedia(artifact.productKey, artifact.approvedMedia);
+  const withoutVerification = structuredClone(valid);
+  delete withoutVerification.verification;
+  assert.throws(
+    () => validatePublishableMedia({ productKey: artifact.productKey, approvedMedia: artifact.approvedMedia, publishableMedia: withoutVerification }),
+    /verification/u,
+  );
+  const legacy = structuredClone(valid);
+  legacy.items[0].publicUrl = 'https://drive.google.com/uc?export=view&id=drive-file-1';
+  assert.throws(
+    () => validatePublishableMedia({ productKey: artifact.productKey, approvedMedia: artifact.approvedMedia, publishableMedia: legacy }),
+    /direct lh3/u,
+  );
 });
 
 test('blocks non-READY production, pricing, commercial content, and identity mismatch', () => {
@@ -259,7 +282,7 @@ test('exports only ready products to a separate workbook while preserving templa
   assert.deepEqual(workbook.worksheets.map((sheet) => sheet.name), ['Reference', 'Products']);
   const sheet = workbook.getWorksheet('Products');
   assert.equal(sheet.getCell(2, 8).value, 449.01);
-  assert.equal(sheet.getCell(2, 11).value, 'https://cdn.example.test/ugopt%3Afirst/1.png, https://cdn.example.test/ugopt%3Afirst/2.png, https://cdn.example.test/ugopt%3Afirst/3.png, https://cdn.example.test/ugopt%3Afirst/4.png, https://cdn.example.test/ugopt%3Afirst/5.png');
+  assert.equal(sheet.getCell(2, 11).value, 'https://lh3.googleusercontent.com/d/drive-file-1=w1280, https://lh3.googleusercontent.com/d/drive-file-2=w1280, https://lh3.googleusercontent.com/d/drive-file-3=w1280, https://lh3.googleusercontent.com/d/drive-file-4=w1280, https://lh3.googleusercontent.com/d/drive-file-5=w1280');
   assert.equal(sheet.getCell(2, 14).value, '0007');
   assert.equal(sheet.getCell(2, 18).value, 'Потужність');
   assert.equal(sheet.getCell(2, 20).value, '2200 Вт');

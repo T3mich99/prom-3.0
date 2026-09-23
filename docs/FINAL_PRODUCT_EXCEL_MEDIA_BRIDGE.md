@@ -89,8 +89,13 @@ artifact:
 {
   productKey,
   version, // optional
+  verification: {
+    status: 'PUBLIC_IMAGE_SHA256_VERIFIED',
+    verifier: 'category:media',
+    urlPolicy: 'lh3-googleusercontent-v1',
+  },
   items: [
-    { index, role, approvedAssetRef, publicUrl, sha256 } // sha256 optional
+    { index, role, fileId, approvedAssetRef, publicUrl, sha256 } // sha256 optional
   ]
 }
 ```
@@ -104,11 +109,14 @@ role; therefore PR #26 binds the stronger available local identity fields
 `sha256` must be structurally valid, but cannot be compared to a hash not
 present in the existing Approved Media artifact.
 
-`publicUrl` validation is structural only and deliberately makes no network
-request. It accepts non-placeholder `https:` URLs and rejects `file:`, local
-filesystem paths, relative paths, `localhost`, loopback addresses,
-`.invalid`, and example placeholder hosts. URLs must be distinct. This does
-not prove public reachability or upload ownership.
+The `verification` block is mandatory and can only be produced by the
+`category:media` route after an unauthenticated image fetch, MIME check and
+SHA-256 comparison. Every item must use the verified direct Drive URL form
+`https://lh3.googleusercontent.com/d/<fileId>=w1280`. Legacy viewer and
+`drive.google.com/uc?export=view` links are rejected before XLSX writing. The
+Excel bridge repeats the structural policy check; it never treats an
+authenticated Drive read or a syntactically valid URL as proof of Prom
+reachability.
 
 The historical Prom workbook fixtures establish the exact serialization:
 
