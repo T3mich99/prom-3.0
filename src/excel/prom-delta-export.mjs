@@ -33,6 +33,14 @@ export const PROM_COLUMN_CLASSES = Object.freeze({
   INTENTIONALLY_BLANK: 'INTENTIONALLY_BLANK',
 });
 
+// Prom metadata defaults are applied only at the physical Excel export boundary.
+// Confirmed supplier values always take precedence; these values never become
+// claims in titles, descriptions, photos, or sourceFacts.
+export const PROM_SOURCE_METADATA_FALLBACKS = Object.freeze({
+  manufacturer: 'AND',
+  country: 'Китай',
+});
+
 const REQUIRED_HEADERS = new Set([
   'Код_товару',
   'Назва_позиції',
@@ -142,6 +150,23 @@ function nonEmpty(value) {
   return text(value).length > 0;
 }
 
+export function applyPromSourceMetadataFallbacks({ canonical = {}, physicalFields = {} } = {}) {
+  const resolvedCanonical = isRecord(canonical) ? canonical : {};
+  const resolvedPhysical = isRecord(physicalFields) ? physicalFields : {};
+  return {
+    manufacturer: nonEmpty(resolvedPhysical['Виробник'])
+      ? text(resolvedPhysical['Виробник'])
+      : nonEmpty(resolvedCanonical.manufacturer)
+        ? text(resolvedCanonical.manufacturer)
+        : PROM_SOURCE_METADATA_FALLBACKS.manufacturer,
+    country: nonEmpty(resolvedPhysical['Країна_виробник'])
+      ? text(resolvedPhysical['Країна_виробник'])
+      : nonEmpty(resolvedCanonical.country)
+        ? text(resolvedCanonical.country)
+        : PROM_SOURCE_METADATA_FALLBACKS.country,
+  };
+}
+
 function columnClass(header) {
   const value = String(header ?? '').trim();
   if (PROM_ASSIGNED_HEADERS.has(value)) return PROM_COLUMN_CLASSES.PROM_ASSIGNED_AFTER_IMPORT;
@@ -238,7 +263,8 @@ export function buildPromDeltaRow(template, product) {
   const values = Array(headers.length).fill(null);
   const fields = isRecord(product.physicalFields) ? clone(product.physicalFields) : {};
   const canonical = canonicalFromFinalRecord(product);
-  const resolved = { ...canonical, ...fields };
+  const metadata = applyPromSourceMetadataFallbacks({ canonical, physicalFields: fields });
+  const resolved = { ...canonical, ...fields, ...metadata };
   const productCode = product.productCode ?? resolved.productCode ?? (product.productionArtifact?.selectedProduct?.product?.supplierSku ? buildPromProductCode(product.productionArtifact.selectedProduct.product.supplierSku) : undefined);
   if (product.productionArtifact && (product.sellingPrice !== undefined || product.price !== undefined || product.photoUrls !== undefined)) throw new TypeError("Production price and photos must come from the validated production artifact");
   if (!nonEmpty(productCode)) throw new TypeError('productCode is required');
@@ -264,6 +290,7 @@ export function buildPromDeltaRow(template, product) {
     if (PROM_ASSIGNED_HEADERS.has(header)) continue;
     if (product.productionArtifact && GENERATED_HEADERS.has(header) && !header.startsWith("HTML_")) throw new TypeError(`physicalFields cannot override validated content: ${header}`);
     if (PROTECTED_AUTHORITY_HEADERS.has(header)) throw new TypeError(`physicalFields cannot override authoritative Prom column: ${header}`);
+    if ((header === 'Виробник' || header === 'Країна_виробник') && !nonEmpty(value)) continue;
     setHeaderValue(values, headers, header, value);
   }
   for (const header of PROM_ASSIGNED_HEADERS) setHeaderValue(values, headers, header, null);

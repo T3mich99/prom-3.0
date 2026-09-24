@@ -87,6 +87,12 @@ that has no verified public HTTPS URLs. It never invents a URL. The existing
 Prom delta exporter can create a workbook only after validated public media,
 category mapping, and the saved Prom master-template contract are available.
 
+At the physical Excel boundary, confirmed supplier metadata is preserved. When the
+manufacturer or country field is missing or blank, the canonical exporter writes
+`Виробник=AND` or `Країна_виробник=Китай`, respectively. This is an Excel metadata
+fallback only; it must not be copied into sourceFacts, product copy, keywords, or
+photos as an unconfirmed supplier claim.
+
 When a durable state store and existing `runId` are supplied, the runner first
 rehydrates the stored request artifacts through the PR28 `reconstructRequest()`
 boundary, then persists each product result and the final aggregate. Newly

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import path from 'node:path';
 
-import { exportPromDeltaWorkbook, buildPromDeltaRow, classifyPromColumns, PROM_COLUMN_CLASSES } from '../../src/excel/prom-delta-export.mjs';
+import { exportPromDeltaWorkbook, buildPromDeltaRow, classifyPromColumns, PROM_COLUMN_CLASSES, applyPromSourceMetadataFallbacks } from '../../src/excel/prom-delta-export.mjs';
 import { createWorkbook, cleanupTempDir, fileHash, loadWorkbook, makeTempDir } from './support.mjs';
 
 const headers = [
@@ -84,8 +84,17 @@ test('writes a new delta row with exact width, category, pricing/media values an
   assert.equal(row[11], 'https://lh3.googleusercontent.com/d/drive-file-1=w1280, https://lh3.googleusercontent.com/d/drive-file-2=w1280, https://lh3.googleusercontent.com/d/drive-file-3=w1280, https://lh3.googleusercontent.com/d/drive-file-4=w1280, https://lh3.googleusercontent.com/d/drive-file-5=w1280');
   assert.equal(row[16], null);
   assert.equal(row[17], null);
+  assert.equal(row[20], 'AND');
+  assert.equal(row[21], 'Китай');
   assert.equal(row[22], 'Потужність');
   assert.equal(row[24], '2200 Вт');
+});
+
+test('uses confirmed manufacturer and country values before applying fallbacks', () => {
+  assert.deepEqual(applyPromSourceMetadataFallbacks(), { manufacturer: 'AND', country: 'Китай' });
+  assert.deepEqual(applyPromSourceMetadataFallbacks({ canonical: { manufacturer: 'VGR', country: 'Китай' } }), { manufacturer: 'VGR', country: 'Китай' });
+  assert.deepEqual(applyPromSourceMetadataFallbacks({ physicalFields: { Виробник: 'Sokany', Країна_виробник: 'Україна' } }), { manufacturer: 'Sokany', country: 'Україна' });
+  assert.deepEqual(applyPromSourceMetadataFallbacks({ canonical: { manufacturer: 'VGR', country: 'Україна' }, physicalFields: { Виробник: '  ', Країна_виробник: '' } }), { manufacturer: 'VGR', country: 'Україна' });
 });
 
 test('exports only the new delta rows, preserves the group sheet, and leaves the source workbook unchanged', async (t) => {
