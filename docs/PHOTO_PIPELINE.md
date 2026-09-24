@@ -186,7 +186,10 @@ adapter and writer do not trust arbitrary generated URLs. Drive upload/public
 sharing, remote URL probes, real image generation, OCR/vision fidelity,
 near-duplicate pixel similarity, Excel serialization, pricing, categories,
 identifiers, content rules, and Prom publishing remain outside this PR and are
-planned for later reviewed boundaries.
+planned for later reviewed boundaries. The canonical category runner performs
+the reviewed Drive handoff through `category:media`: it verifies all five direct
+URLs and SHA-256 bindings, then removes the temporary local photo bytes and
+retains only provenance metadata for the Excel bridge.
 
 Historical scripts remain untouched. The repository currently contains several
 older pipelines: Sharp/Python local compositors and normalizers, role prompt and

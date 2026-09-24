@@ -64,6 +64,10 @@ AI-сервіс. Для продовження збережи фактичні �
   `category:media`, а всі п'ять URL мають форму
   `https://lh3.googleusercontent.com/d/<fileId>=w1280`. Старі `uc?export=view`
   посилання не передавай у Excel.
+- `category:media` після цієї перевірки видаляє локальні байти рівно цих п'яти фото.
+  Перед експортом перевіряй `publishableMedia.cleanup.status=LOCAL_FILES_REMOVED`.
+  Усі записи мають зберігати один productKey, supplier SKU, індекс, роль, SHA-256
+  і Drive fileId; повторний локальний шлях або змішаний товар блокує очищення.
 
 Старий план без styleProfile треба перебудувати. Зміна style profile або байтів
 еталону змінює fingerprint і блокує повторне використання старого плану як актуального.

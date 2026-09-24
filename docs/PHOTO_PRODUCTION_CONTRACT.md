@@ -106,6 +106,18 @@ byte-for-byte identical, the plan version increments once, and individual plus
 series QA runs again. A forged or stale quality result is rejected before any
 provider call.
 
+## Local photo lifecycle after Drive publication
+
+Generated PNG bytes are temporary working files. The category publication route
+must upload the exact five files for one `productKey` and supplier SKU, verify
+each direct public Drive URL without authorization, compare every remote SHA-256
+with its local approved file, and only then remove those five local files.
+`category:media` returns `cleanup.status=LOCAL_FILES_REMOVED` as the durable
+handoff proof. It deletes by the bound product index, canonical role, absolute
+path, and SHA-256; reused or mixed paths are rejected. Paths and hashes may stay
+in provenance for Excel identity checks, but photo bytes do not remain on the
+computer after successful publication. A cleanup failure blocks the handoff.
+
 This contract does not add a provider, paid API, image hosting, category,
 pricing, content, registry, or Excel architecture. Existing provider-neutral
 and real-file boundaries remain in force.

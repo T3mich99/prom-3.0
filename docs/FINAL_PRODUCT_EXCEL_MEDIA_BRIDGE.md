@@ -109,6 +109,26 @@ role; therefore PR #26 binds the stronger available local identity fields
 `sha256` must be structurally valid, but cannot be compared to a hash not
 present in the existing Approved Media artifact.
 
+The canonical `category:media` route treats these local references as temporary
+provenance only. After the five direct Drive URLs and SHA-256 values are
+verified, it removes the local photo bytes and adds a top-level cleanup proof:
+
+```js
+cleanup: {
+  mode: 'DELETE_AFTER_VERIFIED_PUBLICATION',
+  retainsPhotoBytes: false,
+  cleanupAuthority: 'category:media',
+  status: 'LOCAL_FILES_REMOVED',
+  productKey,
+  sourceCode,
+  items: [{ index, role, sha256 }],
+}
+```
+
+The Excel bridge accepts this proof and continues to use `approvedAssetRef` only
+to bind the published item to the original approved record. It never reads local
+photo bytes during Excel export.
+
 The `verification` block is mandatory and can only be produced by the
 `category:media` route after an unauthenticated image fetch, MIME check and
 SHA-256 comparison. Every item must use the verified direct Drive URL form

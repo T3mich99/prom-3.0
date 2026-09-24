@@ -3,7 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { loadRepositoryGoogleDriveMediaConfig } from '../media/google-drive-media-config.mjs';
-import { toPublishableMediaArtifact } from '../media/google-drive-media-publication.mjs';
+import { cleanupPublishedLocalPhotoFiles, toPublishableMediaArtifact } from '../media/google-drive-media-publication.mjs';
 
 export async function probePublicImage(url, { fetchImpl = fetch } = {}) {
   const parsed = new URL(url);
@@ -24,7 +24,7 @@ export async function probePublicImage(url, { fetchImpl = fetch } = {}) {
   return { ok: size > 0, contentType, sha256: hash.digest('hex') };
 }
 
-export async function runMediaImportCli(argv) {
+export async function runMediaImportCli(argv, { fetchImpl = fetch } = {}) {
   const args = {};
   for (let i = 0; i < argv.length; i += 2) {
     if (!['--input', '--output'].includes(argv[i]) || !argv[i + 1] || args[argv[i]]) throw new Error('Usage: npm run category:media -- --input publication.json --output publishable-media.json');
@@ -33,13 +33,28 @@ export async function runMediaImportCli(argv) {
   if (!args['--input'] || !args['--output']) throw new Error('Both --input and --output are required');
   const inputPath = path.resolve(args['--input']);
   const outputPath = path.resolve(args['--output']);
+  if (outputPath === inputPath) throw new Error('Output must not overwrite publication input');
+  if (await fs.access(outputPath).then(() => true).catch(() => false)) throw new Error('Output already exists; refusing to replace a publication result');
   const { publication, approvedMedia } = JSON.parse(await fs.readFile(inputPath, 'utf8'));
-  if (outputPath === inputPath || approvedMedia?.photos?.some((photo) => path.resolve(photo.assetRef) === outputPath)) throw new Error('Output must not overwrite an input');
+  if (approvedMedia?.photos?.some((photo) => path.resolve(photo.assetRef) === outputPath)) throw new Error('Output must not overwrite an input');
   const config = await loadRepositoryGoogleDriveMediaConfig();
   if (publication?.folderId !== config.productImagesFolderId) throw new Error('Publication folder differs from the configured PRODUCT IMAGES destination');
-  const result = await toPublishableMediaArtifact(publication, { approvedMedia, probe: (url) => probePublicImage(url) });
+  const publishableMedia = await toPublishableMediaArtifact(publication, { approvedMedia, probe: (url) => probePublicImage(url, { fetchImpl }) });
+  const cleanup = await cleanupPublishedLocalPhotoFiles({
+    publication,
+    approvedMedia,
+    publishableMedia,
+    protectedPaths: [inputPath, outputPath],
+  });
+  const result = { ...publishableMedia, cleanup };
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
-  await fs.writeFile(outputPath, JSON.stringify(result, null, 2) + '\n', { flag: 'wx' });
+  const stagingPath = `${outputPath}.staging`;
+  try {
+    await fs.writeFile(stagingPath, JSON.stringify(result, null, 2) + '\n', { flag: 'wx' });
+    await fs.rename(stagingPath, outputPath);
+  } finally {
+    await fs.rm(stagingPath, { force: true });
+  }
   return result;
 }
 

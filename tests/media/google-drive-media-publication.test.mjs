@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import crypto from 'node:crypto';
-import { probePublicImage } from '../../src/cli/category-media-import.mjs';
+import { probePublicImage, runMediaImportCli } from '../../src/cli/category-media-import.mjs';
 import { validatePublishableMedia } from '../../src/excel/final-product-excel-bridge.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import {
   buildDriveMediaPublicationTask,
+  cleanupPublishedLocalPhotoFiles,
   expectedDriveFilename,
+  LOCAL_PHOTO_LIFECYCLE,
   publicPhotoUrlList,
   toPublishableMediaArtifact,
   validateDriveMediaPublicationArtifact,
@@ -117,6 +119,95 @@ test('publication task refuses files outside the injected output root', async (t
   const files = Array.from({ length: 5 }, (_, index) => ({ path: index === 0 ? outside : path.join(root, `missing-${index}.png`) }));
   await assert.rejects(() => buildDriveMediaPublicationTask({ productKey: 'p', sourceCode: 'U1U', outputRoot: root, files, config: driveConfig }), /outputRoot/u);
   await fs.rm(outside, { force: true });
+});
+
+test('removes only the verified local files for the matching product after Drive publication', async (t) => {
+  const root = await makeTempDir();
+  t.after(() => cleanupTempDir(root));
+  const items = Array.from({ length: 5 }, (_, index) => {
+    const bytes = Buffer.from(`verified-${index + 1}`);
+    const assetRef = path.join(root, `product-U123U-${index + 1}.png`);
+    return {
+      index: index + 1,
+      role: ['hero', 'usage', 'benefits', 'feature', 'final'][index],
+      filename: expectedDriveFilename('U123U', index + 1, ['hero', 'usage', 'benefits', 'feature', 'final'][index]),
+      fileId: `cleanup-drive-file-${index + 1}`,
+      sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+      publicUrl: `https://lh3.googleusercontent.com/d/cleanup-drive-file-${index + 1}=w1280`,
+      bytes,
+      assetRef,
+    };
+  });
+  const publication = {
+    productKey: 'ugopt:cleanup', sourceCode: 'U123U', folderId: 'images-pr29',
+    access: { permissionType: 'anyone', role: 'reader', allowFileDiscovery: false },
+    items: items.map(({ bytes, assetRef, ...item }) => item),
+  };
+  const approvedMedia = { productKey: publication.productKey, photos: [] };
+  for (const item of items) {
+    await fs.writeFile(item.assetRef, item.bytes);
+    approvedMedia.photos.push({ index: item.index, role: item.role, assetRef: item.assetRef });
+  }
+  const probe = async (url, item) => ({ ok: true, contentType: 'image/png', sha256: item.sha256, url });
+  const publishableMedia = await toPublishableMediaArtifact(publication, { probe, approvedMedia });
+  const cleanup = await cleanupPublishedLocalPhotoFiles({ publication, approvedMedia, publishableMedia, protectedPaths: [path.join(root, 'request.json')] });
+  const publishableAfterCleanup = { ...publishableMedia, cleanup };
+  assert.equal(validatePublishableMedia({ productKey: publication.productKey, approvedMedia, publishableMedia: publishableAfterCleanup }).items.length, 5);
+  assert.deepEqual(cleanup, {
+    ...LOCAL_PHOTO_LIFECYCLE,
+    status: 'LOCAL_FILES_REMOVED',
+    productKey: publication.productKey,
+    sourceCode: publication.sourceCode,
+    items: items.map((item) => ({ index: item.index, role: item.role, sha256: item.sha256 })),
+  });
+  assert.equal((await Promise.all(items.map((item) => fs.access(item.assetRef).then(() => true).catch(() => false)))).some(Boolean), false);
+});
+
+test('refuses local cleanup when the five product paths are mixed or reused', async (t) => {
+  const root = await makeTempDir();
+  t.after(() => cleanupTempDir(root));
+  const assetRef = path.join(root, 'same.png');
+  await fs.writeFile(assetRef, Buffer.from('same'));
+  const sha256 = crypto.createHash('sha256').update('same').digest('hex');
+  const publication = { productKey: 'ugopt:mixed', sourceCode: 'U123U', folderId: 'images-pr29', access: { permissionType: 'anyone', role: 'reader', allowFileDiscovery: false }, items: [1, 2, 3, 4, 5].map((index) => ({ index, role: ['hero', 'usage', 'benefits', 'feature', 'final'][index - 1], filename: expectedDriveFilename('U123U', index, ['hero', 'usage', 'benefits', 'feature', 'final'][index - 1]), fileId: `mixed-${index}`, sha256, publicUrl: `https://lh3.googleusercontent.com/d/mixed-${index}=w1280` })) };
+  const approvedMedia = { productKey: publication.productKey, photos: [1, 2, 3, 4, 5].map((index) => ({ index, assetRef })) };
+  const publishableMedia = await toPublishableMediaArtifact(publication, { probe: async (url, item) => ({ ok: true, contentType: 'image/png', sha256: item.sha256, url }), approvedMedia });
+  await assert.rejects(() => cleanupPublishedLocalPhotoFiles({ publication, approvedMedia, publishableMedia }), /unique per product/u);
+  assert.equal(await fs.access(assetRef).then(() => true).catch(() => false), true);
+});
+
+test('category:media writes a cleanup proof and removes local bytes after all public probes', async (t) => {
+  const root = await makeTempDir();
+  t.after(() => cleanupTempDir(root));
+  const files = [];
+  const items = [];
+  for (let index = 1; index <= 5; index += 1) {
+    const bytes = Buffer.from(`cli-verified-${index}`);
+    const assetRef = path.join(root, `cli-product-${index}.png`);
+    await fs.writeFile(assetRef, bytes);
+    const role = ['hero', 'usage', 'benefits', 'feature', 'final'][index - 1];
+    const fileId = `cli-drive-file-${index}`;
+    const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
+    files.push({ index, assetRef, bytes, role });
+    items.push({ index, role, filename: expectedDriveFilename('U123U', index, role), fileId, sha256, publicUrl: `https://lh3.googleusercontent.com/d/${fileId}=w1280` });
+  }
+  const publication = {
+    productKey: 'ugopt:cli-cleanup', sourceCode: 'U123U', folderId: '1quplTV97b3geOQu5dn_AJXFLYbEmcNpN',
+    access: { permissionType: 'anyone', role: 'reader', allowFileDiscovery: false }, items,
+  };
+  const approvedMedia = { productKey: publication.productKey, photos: files.map(({ index, assetRef, role }) => ({ index, role, assetRef })) };
+  const inputPath = path.join(root, 'publication.json');
+  const outputPath = path.join(root, 'publishable-media.json');
+  await fs.writeFile(inputPath, JSON.stringify({ publication, approvedMedia }));
+  const result = await runMediaImportCli(['--input', inputPath, '--output', outputPath], {
+    fetchImpl: async (url) => {
+      const index = Number(url.match(/cli-drive-file-(\d+)/u)?.[1]);
+      return new Response(Buffer.from(`cli-verified-${index}`), { headers: { 'content-type': 'image/png' } });
+    },
+  });
+  assert.equal(result.cleanup.status, 'LOCAL_FILES_REMOVED');
+  assert.equal((await Promise.all(files.map((file) => fs.access(file.assetRef).then(() => true).catch(() => false)))).some(Boolean), false);
+  assert.deepEqual(JSON.parse(await fs.readFile(outputPath, 'utf8')).cleanup, result.cleanup);
 });
 
 

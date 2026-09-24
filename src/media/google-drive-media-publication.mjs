@@ -16,6 +16,12 @@ export const DRIVE_MEDIA_PUBLICATION_STATUSES = Object.freeze({
 
 export const DIRECT_GOOGLE_IMAGE_URL_POLICY = 'lh3-googleusercontent-v1';
 
+export const LOCAL_PHOTO_LIFECYCLE = Object.freeze({
+  mode: 'DELETE_AFTER_VERIFIED_PUBLICATION',
+  retainsPhotoBytes: false,
+  cleanupAuthority: 'category:media',
+});
+
 const ROLE_FILE_SUFFIX = Object.freeze({
   hero: '01_main.png',
   usage: '02_usage.png',
@@ -110,9 +116,10 @@ export async function buildDriveMediaPublicationTask(input) {
       productImagesFolderUrl: config.productImagesFolderUrl,
       permissions: 'operator must set public read only; no write permission changes are requested',
     },
+    localPhotoLifecycle: clone(LOCAL_PHOTO_LIFECYCLE),
     expectedNames: files.map((item) => item.filename),
     files,
-    instructions: 'Upload these exact files to the configured product-images folder, preserve filenames, set public read access, then import file IDs, hashes, roles, and verified public HTTPS URLs.',
+    instructions: 'Upload these exact files to the configured product-images folder, preserve filenames, set public read access, then import file IDs, hashes, roles, and verified public HTTPS URLs. After category:media verifies all five identities and bytes, it deletes these local photo files.',
   };
 }
 
@@ -194,6 +201,68 @@ export async function toPublishableMediaArtifact(artifact, options = {}) {
       urlPolicy: DIRECT_GOOGLE_IMAGE_URL_POLICY,
     },
     items,
+  };
+}
+
+function cleanupItemIdentity(item, approved, index) {
+  if (!isRecord(approved) || typeof approved.assetRef !== 'string' || !path.isAbsolute(approved.assetRef)) {
+    throw new TypeError(`Approved local photo ${index} must retain an absolute assetRef for cleanup`);
+  }
+  if (!Number.isSafeInteger(approved.index) || approved.index !== index) {
+    throw new TypeError(`Approved local photo ${index} does not match the canonical index`);
+  }
+  if (approved.role !== undefined && approved.role !== PHOTO_ROLE_ORDER[index - 1]) {
+    throw new TypeError(`Approved local photo ${index} does not match the canonical role`);
+  }
+  return path.resolve(approved.assetRef);
+}
+
+/** Delete only the five local files already bound to verified Drive items. */
+export async function cleanupPublishedLocalPhotoFiles({ publication, approvedMedia, publishableMedia, protectedPaths = [] } = {}) {
+  if (!isRecord(publication) || !isRecord(approvedMedia) || !isRecord(publishableMedia)) {
+    throw new TypeError('publication, approvedMedia and publishableMedia are required for local photo cleanup');
+  }
+  if (publication.productKey !== approvedMedia.productKey || publication.productKey !== publishableMedia.productKey) {
+    throw new TypeError('Local photo cleanup product identity does not match the publication and approved media');
+  }
+  if (publishableMedia.verification?.status !== 'PUBLIC_IMAGE_SHA256_VERIFIED'
+    || publishableMedia.verification?.verifier !== 'category:media') {
+    throw new TypeError('Local photo cleanup requires a verified category:media publication');
+  }
+  if (!Array.isArray(approvedMedia.photos) || approvedMedia.photos.length !== PHOTO_ROLE_ORDER.length
+    || !Array.isArray(publishableMedia.items) || publishableMedia.items.length !== PHOTO_ROLE_ORDER.length) {
+    throw new TypeError('Local photo cleanup requires exactly five approved and published items');
+  }
+  const protectedSet = new Set(protectedPaths.filter((value) => typeof value === 'string').map((value) => path.resolve(value)));
+  const plans = [];
+  const seenPaths = new Set();
+  for (const item of publishableMedia.items) {
+    const index = item?.index;
+    const approved = approvedMedia.photos.find((photo) => photo?.index === index);
+    const filePath = cleanupItemIdentity(item, approved, index);
+    if (seenPaths.has(filePath)) throw new TypeError('Local photo cleanup paths must be unique per product and role');
+    if (protectedSet.has(filePath)) throw new TypeError('Local photo cleanup cannot delete a request or output artifact');
+    if (item.role !== PHOTO_ROLE_ORDER[index - 1]) throw new TypeError(`Published item ${index} does not match the canonical role`);
+    if (typeof item.sha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(item.sha256)) throw new TypeError(`Published item ${index} must retain its verified SHA-256`);
+    const stat = await fs.stat(filePath).catch(() => null);
+    if (!stat?.isFile() || stat.size === 0) throw new Error(`Local photo ${index} is missing before cleanup: ${filePath}`);
+    const actualSha256 = await fileSha256(filePath);
+    if (actualSha256 !== item.sha256) throw new Error(`Local photo ${index} changed before cleanup: ${filePath}`);
+    seenPaths.add(filePath);
+    plans.push({ index, role: item.role, filePath, sha256: item.sha256 });
+  }
+  for (const plan of plans) await fs.rm(plan.filePath, { force: false });
+  const remaining = [];
+  for (const plan of plans) {
+    if (await fs.stat(plan.filePath).then(() => true).catch(() => false)) remaining.push(plan.index);
+  }
+  if (remaining.length) throw new Error(`Local photo cleanup incomplete for indexes: ${remaining.join(', ')}`);
+  return {
+    ...clone(LOCAL_PHOTO_LIFECYCLE),
+    status: 'LOCAL_FILES_REMOVED',
+    productKey: publication.productKey,
+    sourceCode: publication.sourceCode,
+    items: plans.map(({ index, role, sha256 }) => ({ index, role, sha256 })),
   };
 }
 

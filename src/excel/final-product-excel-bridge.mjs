@@ -33,9 +33,10 @@ const PRODUCTION_ARTIFACT_KEYS = new Set([
   'productKey', 'workflowStatus', 'selectedProduct', 'pricingDecision', 'contentArtifact',
   'characteristicPlan', 'approvedMedia', 'resolvedMetadata', 'provenance', 'diagnostics',
 ]);
-const PUBLISHABLE_MEDIA_KEYS = new Set(['productKey', 'version', 'verification', 'items']);
+const PUBLISHABLE_MEDIA_KEYS = new Set(['productKey', 'version', 'verification', 'items', 'cleanup']);
 const PUBLISHABLE_VERIFICATION_KEYS = new Set(['status', 'verifier', 'urlPolicy']);
 const PUBLISHABLE_ITEM_KEYS = new Set(['index', 'role', 'fileId', 'approvedAssetRef', 'sha256', 'publicUrl']);
+const PUBLISHABLE_CLEANUP_KEYS = new Set(['mode', 'retainsPhotoBytes', 'cleanupAuthority', 'status', 'productKey', 'sourceCode', 'items']);
 const LOCAL_URL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '0.0.0.0']);
 const REQUIRED_EXPORT_FIELDS = Object.freeze(['titleRu', 'price', 'photoUrls']);
 
@@ -188,8 +189,36 @@ function approvedPhotoByIndex(approvedMedia, productKey) {
   return byIndex;
 }
 
+function validateLocalPhotoCleanup(cleanup, productKey, items, expectedSourceCode = undefined) {
+  if (cleanup === undefined) return;
+  assertRecord(cleanup, 'publishableMedia.cleanup');
+  assertKnownKeys(cleanup, PUBLISHABLE_CLEANUP_KEYS, 'publishableMedia.cleanup');
+  if (cleanup.mode !== 'DELETE_AFTER_VERIFIED_PUBLICATION'
+    || cleanup.retainsPhotoBytes !== false
+    || cleanup.cleanupAuthority !== 'category:media'
+    || cleanup.status !== 'LOCAL_FILES_REMOVED'
+    || cleanup.productKey !== productKey
+    || typeof cleanup.sourceCode !== 'string' || !cleanup.sourceCode.trim()
+    || (expectedSourceCode !== undefined && cleanup.sourceCode !== expectedSourceCode)) {
+    throw new FinalProductExcelBridgeError('Publishable Media cleanup must attest that category:media removed the local photo bytes.', 'PUBLISHABLE_MEDIA_CLEANUP_INVALID');
+  }
+  if (!Array.isArray(cleanup.items) || cleanup.items.length !== PHOTO_ROLE_ORDER.length) {
+    throw new FinalProductExcelBridgeError('Publishable Media cleanup must contain exactly five photo records.', 'PUBLISHABLE_MEDIA_CLEANUP_INVALID');
+  }
+  for (const [position, item] of cleanup.items.entries()) {
+    if (!isRecord(item) || item.index !== position + 1 || item.role !== PHOTO_ROLE_ORDER[position]
+      || typeof item.sha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(item.sha256)) {
+      throw new FinalProductExcelBridgeError('Publishable Media cleanup does not match the canonical five-photo identity.', 'PUBLISHABLE_MEDIA_CLEANUP_INVALID');
+    }
+    if (items[position].index !== item.index || items[position].role !== item.role
+      || (items[position].sha256 !== undefined && items[position].sha256 !== item.sha256)) {
+      throw new FinalProductExcelBridgeError('Publishable Media cleanup does not match its verified Drive items.', 'PUBLISHABLE_MEDIA_CLEANUP_INVALID');
+    }
+  }
+}
+
 /** Validate a category:media network-attested public URL artifact against approved local media; this bridge performs no new network request. */
-export function validatePublishableMedia({ productKey, approvedMedia, publishableMedia }) {
+export function validatePublishableMedia({ productKey, approvedMedia, publishableMedia, sourceCode = undefined }) {
   const key = nonEmptyString(productKey, 'productKey');
   assertRecord(approvedMedia, 'approvedMedia');
   assertRecord(publishableMedia, 'publishableMedia');
@@ -247,6 +276,7 @@ export function validatePublishableMedia({ productKey, approvedMedia, publishabl
   if (items.some((item, index) => item.index !== index + 1)) {
     throw new FinalProductExcelBridgeError('Publishable Media items must already be in canonical index order.', 'PUBLISHABLE_MEDIA_ORDER_INVALID');
   }
+  validateLocalPhotoCleanup(publishableMedia.cleanup, key, items, sourceCode);
   return {
     productKey: key,
     ...(publishableMedia.version === undefined ? {} : { version: clone(publishableMedia.version) }),
@@ -328,7 +358,12 @@ export function buildFinalProductExcelRecord(input) {
   let media;
   let content;
   try {
-    media = validatePublishableMedia({ productKey, approvedMedia: artifact.approvedMedia, publishableMedia: normalized.publishableMedia });
+    media = validatePublishableMedia({
+      productKey,
+      approvedMedia: artifact.approvedMedia,
+      publishableMedia: normalized.publishableMedia,
+      sourceCode: artifact.selectedProduct.product?.supplierSku,
+    });
     content = buildContentExcelRow({
       selectedProduct: artifact.selectedProduct,
       contentArtifact: artifact.contentArtifact,

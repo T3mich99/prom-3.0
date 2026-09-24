@@ -56,7 +56,9 @@ uploading the exact files with public read access. The artifact must contain
 five unique Drive file IDs, SHA-256 values, roles, filenames, and supplied
 public HTTPS image URLs. No URL is synthesized for Excel and no local path is
 accepted as a public URL. URL byte/content verification is performed through
-an injected probe so automated tests remain offline.
+an injected probe so automated tests remain offline. After all five remote
+bytes match, `category:media` deletes the exact five local files and records
+`cleanup.status=LOCAL_FILES_REMOVED`; mixed or reused paths block the handoff.
 
 Drive destinations are stored in local SQLite project/runtime state by
 `saveGoogleDriveMediaConfig` and loaded by the publication bridge. An explicit
