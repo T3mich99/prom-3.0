@@ -1,0 +1,294 @@
+{
+  "version": 1,
+  "sourcePath": "catalog/export-products-24-09-26_18-12-48.xlsx",
+  "sourceSha256": "427662f18c3bfeda3f6ac466d0745444cc4d0664362b114a1a2c09394bfa982e",
+  "comparedWithBootstrapId": "prom-bootstrap-329aee10324ae99bfc493549",
+  "status": "COLLISIONS_FOUND",
+  "activatedAsCanonicalCatalog": false,
+  "reason": "The source contains conflicting duplicate product codes. Resolve the listed codes before changing config/category-workflow.json.",
+  "schema": {
+    "changed": false,
+    "structuralSchemaFingerprint": "6f15f29f1ad96d59e889c6ce7d819bee614f5f9c59ac37efd931e543d574dc6d",
+    "legacySchemaFingerprint": "76436527f89530985de4aa35e5ebd71e8144897261a2228109506cd072b13e76"
+  },
+  "counts": {
+    "externalProducts": 295,
+    "missingProducts": 1,
+    "conflictingCodes": 27
+  },
+  "conflictingCodes": [
+    {
+      "code": "U77875U",
+      "rows": [
+        35,
+        1216
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "UAE-0149U",
+      "rows": [
+        85,
+        433
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U77312U",
+      "rows": [
+        157,
+        158
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U51149U",
+      "rows": [
+        511,
+        589
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U35991U",
+      "rows": [
+        512,
+        590
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U35837U",
+      "rows": [
+        513,
+        591
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U7129U",
+      "rows": [
+        514,
+        592
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U8861U",
+      "rows": [
+        515,
+        593
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U35851U",
+      "rows": [
+        516,
+        595
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U35853U",
+      "rows": [
+        517,
+        596
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U51236U",
+      "rows": [
+        518,
+        597
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U24260U",
+      "rows": [
+        519,
+        598
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U51772U",
+      "rows": [
+        520,
+        599
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U8227U",
+      "rows": [
+        521,
+        600
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U35871U",
+      "rows": [
+        522,
+        601
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U35917U",
+      "rows": [
+        523,
+        603
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U35918U",
+      "rows": [
+        524,
+        604
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U35983U",
+      "rows": [
+        525,
+        605
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U35984U",
+      "rows": [
+        526,
+        606
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U35992U",
+      "rows": [
+        527,
+        607
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U35993U",
+      "rows": [
+        528,
+        608
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U36004U",
+      "rows": [
+        529,
+        609
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U10548U",
+      "rows": [
+        530,
+        610
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U13351U",
+      "rows": [
+        531,
+        611
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U10345U",
+      "rows": [
+        532,
+        612
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U36016U",
+      "rows": [
+        533,
+        613
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    },
+    {
+      "code": "U23529U",
+      "rows": [
+        535,
+        627
+      ],
+      "kind": "CONFLICTING",
+      "identical": false,
+      "conflicting": true
+    }
+  ],
+  "sourceReadOnly": true,
+  "destructiveChangesApplied": false,
+  "registryUpdated": false
+}
